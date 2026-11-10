@@ -1,0 +1,12 @@
+{
+  "name": "BRASILEIRO — Português Brasileiro",
+  "short_name": "BRASILEIRO",
+  "description": "Изучай живой бразильский португальский",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f8f3",
+  "theme_color": "#078b52",
+  "lang": "ru",
+  "icons": []
+}
