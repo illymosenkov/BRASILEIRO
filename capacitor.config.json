@@ -1,0 +1,8 @@
+{
+  "appId": "com.brasileiro.language",
+  "appName": "BRASILEIRO",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  }
+}
