@@ -1,6 +1,6 @@
 {
-  "appId": "com.brasileiro.language",
-  "appName": "BRASILEIRO",
+  "appId": "br.bora.civic",
+  "appName": "Bora",
   "webDir": "www",
   "server": {
     "androidScheme": "https"
