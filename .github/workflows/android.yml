@@ -24,7 +24,7 @@ jobs:
         run: npm install
       - name: Prepare Bora identity
         run: |
-          node -e "const fs=require('fs');fs.writeFileSync('capacitor.config.json',JSON.stringify({appId:'br.bora.civic4',appName:'Bora v4',webDir:'www',server:{androidScheme:'https'}}))"
+          node -e "const fs=require('fs');fs.writeFileSync('capacitor.config.json',JSON.stringify({appId:'br.bora.civic41',appName:'Bora 4.1',webDir:'www',server:{androidScheme:'https'}}))"
           test -f www/index.html
       - name: Add Android platform
         run: npx cap add android
@@ -72,8 +72,16 @@ jobs:
       - name: Restore stable debug signing key
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
-          key: bora-civic4-debug-keystore-v1
+          path: android/bora-signing.keystore
+          key: bora-civic41-explicit-keystore-v1
+      - name: Configure persistent debug signing
+        run: |
+          if [ ! -f android/bora-signing.keystore ]; then
+            keytool -genkeypair -keystore android/bora-signing.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          cat >> android/app/build.gradle <<'GRADLE'
+          android { signingConfigs { debug { storeFile rootProject.file('bora-signing.keystore'); storePassword 'android'; keyAlias 'androiddebugkey'; keyPassword 'android' } } }
+          GRADLE
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug
