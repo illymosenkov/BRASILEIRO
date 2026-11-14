@@ -4,12 +4,12 @@ const data=JSON.parse(html.match(/<script id="bora-data" type="application\/json
 const script=[...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)][1][1];
 const elements=new Map(),saved=new Map();
 function el(id){if(!elements.has(id))elements.set(id,{textContent:id==='bora-data'?JSON.stringify(data):'',style:{},innerHTML:'',value:'',setAttribute(){},scrollIntoView(){},querySelector(){return {disabled:false}},focus(){}});return elements.get(id)}
-const context=vm.createContext({console,Date,Math,Map,Set,JSON,Number,String,Blob,URL,setTimeout:()=>{},confirm:()=>true,matchMedia:()=>({matches:true}),document:{getElementById:el,addEventListener(){},querySelectorAll:()=>[],createElement:()=>({click(){}})},localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},window:{scrollTo(){}},AudioContext:undefined});
+const context=vm.createContext({console,Date,Math,Map,Set,JSON,Number,String,Blob,URL,setTimeout:()=>{},clearTimeout(){},confirm:()=>true,matchMedia:()=>({matches:true}),document:{getElementById:el,addEventListener(){},querySelectorAll:()=>[],createElement:()=>({click(){}})},localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},window:{scrollTo(){}},AudioContext:undefined});
 vm.runInContext(script,context);
 function run(s){return vm.runInContext(s,context)}
-assert.equal(run('verbs.length'),300);assert.equal(run('new Set(verbs.map(v=>v.inf)).size'),300);assert.equal(run('topics.length'),24);assert.equal(run('allWords.length'),540);
+assert.equal(run('verbs.length'),300);assert.equal(run('new Set(verbs.map(v=>v.inf)).size'),300);assert.equal(run('topics.length'),24);assert.equal(run('allWords.length'),668);
 for(const v of data.verbs)assert.ok(v.inf&&v.eu&&v.meaning&&v.pron&&v.euPron);
-assert.equal(run("verbs.find(v=>v.inf==='fazer').eu"),'fa\u00e7o');assert.equal(run("verbs.find(v=>v.inf==='pedir').eu"),'pe\u00e7o');assert.equal(run("verbs.find(v=>v.inf==='dirigir').eu"),'dirijo');
+assert.equal(run("verbs.find(v=>v.inf==='fazer').eu"),'faço');assert.equal(run("verbs.find(v=>v.inf==='pedir').eu"),'peço');assert.equal(run("verbs.find(v=>v.inf==='dirigir').eu"),'dirijo');
 run("start('v0')");assert.equal(run('session.queue.length'),10);
 run('submitAnswer(false)');assert.equal(run('session.queue.length'),11);assert.equal(run('state.xp'),0);
 run('submitAnswer(true)');assert.equal(run('state.xp'),0,'double-click must not award points');
@@ -20,9 +20,28 @@ assert.equal(run('state.streak'),1);assert.equal(JSON.parse(saved.get('bora_civi
 run("start('v0','flash');reveal();submitAnswer(true)");assert.equal(run('session.index'),1);assert.ok(run('session.lesson.words.some(mastered)'));
 run("start('v0','write');document.getElementById('typed').value='';writeAnswer()");assert.equal(run('session.answered'),false);
 run("document.getElementById('typed').value='eu '+session.queue[0].w.eu;writeAnswer()");assert.equal(run('session.answered'),true);
-assert.equal(run("normalize(' eu FA\\u00c7O ')"),'faco');
+assert.equal(run("normalize(' eu FAÇO ')"),'faco');
 run("screen='home';go('dictionary');document.getElementById('search').value='falar';dictionaryResults()");assert.ok(el('word-list').innerHTML.includes('eu falo'));assert.ok(!el('word-list').innerHTML.includes('eu como'));
 run("start('n9')");assert.equal(run('session.queue[0].kind'),'meaning');assert.equal(run('session.lesson.words.length'),10);
+assert.equal(run('verbGroups.length'),18);assert.equal(run('verbGroups.flatMap(g=>g.words).length'),300);
+assert.equal(run('new Set(verbGroups.flatMap(g=>g.words.map(w=>w.inf))).size'),300);
+assert.ok(run('packs.every(p=>p.words.length>0&&p.words.length<=10)'));
+assert.equal(run('phraseTopics.length'),16);assert.equal(run('phraseTopics.flatMap(t=>t.words).length'),128);
+assert.ok(run("phraseTopics.every(t=>t.words.every(w=>w.pron&&w.meaning&&w.word&&w.type==='phrase'))"));
+run("start('p2');submitAnswer(false)");assert.equal(run('session.queue.length'),9);
+run('while(!session.finished){if(!session.answered)submitAnswer(true);else next()}');
+assert.ok(el('view').innerHTML.includes('victory-scene'));assert.ok(el('view').innerHTML.includes('фраз пройдено'));
+assert.equal(run('POP_TIMES.length'),6);assert.ok(run('POP_TIMES.every(t=>t>0&&t<5.6)'));
+assert.ok(html.includes('prefers-reduced-motion'));assert.ok(html.includes('exhaust-burst'));
+run("screen='home';go('phrases')");assert.ok(el('view').innerHTML.includes('На все случаи жизни'));
+run("dictionaryTab='phrase';go('dictionary');document.getElementById('search').value='café';dictionaryResults()");assert.ok(el('word-list').innerHTML.includes('Quero um café'));
+run('stopVictory()');assert.equal(run('victoryNodes.length'),0);assert.equal(run('victoryTimers.length'),0);
 assert.equal(run("normalize('<script>')"),'<script>');assert.equal(run("esc('<script>')"),'&lt;script&gt;');
-console.log('PASS: 300 unique verbs, 240 nouns, forms, pronunciation fields, error requeue, duplicate-answer guard, XP, persistence, cards, typed eu and dictionary search.');
-
+context.fakeAudio={started:0,stopped:0};
+context.fakeParam=()=>({value:1,setValueAtTime(v){this.value=v},exponentialRampToValueAtTime(v){this.value=v},linearRampToValueAtTime(v){this.value=v},cancelScheduledValues(){}});
+context.fakeNode=()=>({gain:context.fakeParam(),frequency:context.fakeParam(),Q:context.fakeParam(),threshold:context.fakeParam(),ratio:context.fakeParam(),connect(){},disconnect(){},start(){context.fakeAudio.started++},stop(){context.fakeAudio.stopped++}});
+context.fakeCtx={currentTime:0,sampleRate:1000,state:'running',destination:{},createGain:context.fakeNode,createDynamicsCompressor:context.fakeNode,createOscillator:context.fakeNode,createBiquadFilter:context.fakeNode,createBufferSource:context.fakeNode,createBuffer:(c,n)=>({getChannelData:()=>new Float32Array(n)})};
+run('audioCtx=fakeCtx;state.sound=false;victoryAudio(false)');assert.equal(context.fakeAudio.started,0);
+run('state.sound=true;victoryAudio(false)');assert.equal(context.fakeAudio.started,14);assert.equal(run('victoryNodes.length'),14);
+run('toggleSound()');assert.equal(run('victoryBus.gain.value'),0);run('stopVictory()');assert.equal(run('victoryNodes.length'),0);assert.ok(context.fakeAudio.stopped>=14);
+console.log('PASS: 300 verbs in 18 themes, 240 nouns, 128 phrases, practice, progress, phrase search, result mascot, timed pops and cancellation.');
