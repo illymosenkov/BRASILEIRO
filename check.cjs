@@ -9,7 +9,7 @@ vm.runInContext(script,context);
 function run(s){return vm.runInContext(s,context)}
 assert.equal(run('verbs.length'),300);assert.equal(run('new Set(verbs.map(v=>v.inf)).size'),300);assert.equal(run('topics.length'),24);assert.equal(run('allWords.length'),540);
 for(const v of data.verbs)assert.ok(v.inf&&v.eu&&v.meaning&&v.pron&&v.euPron);
-assert.equal(run("verbs.find(v=>v.inf==='fazer').eu"),'faco');assert.equal(run("verbs.find(v=>v.inf==='pedir').eu"),'peco');assert.equal(run("verbs.find(v=>v.inf==='dirigir').eu"),'dirijo');
+assert.equal(run("verbs.find(v=>v.inf==='fazer').eu"),'fa\u00e7o');assert.equal(run("verbs.find(v=>v.inf==='pedir').eu"),'pe\u00e7o');assert.equal(run("verbs.find(v=>v.inf==='dirigir').eu"),'dirijo');
 run("start('v0')");assert.equal(run('session.queue.length'),10);
 run('submitAnswer(false)');assert.equal(run('session.queue.length'),11);assert.equal(run('state.xp'),0);
 run('submitAnswer(true)');assert.equal(run('state.xp'),0,'double-click must not award points');
@@ -20,7 +20,7 @@ assert.equal(run('state.streak'),1);assert.equal(JSON.parse(saved.get('bora_civi
 run("start('v0','flash');reveal();submitAnswer(true)");assert.equal(run('session.index'),1);assert.ok(run('session.lesson.words.some(mastered)'));
 run("start('v0','write');document.getElementById('typed').value='';writeAnswer()");assert.equal(run('session.answered'),false);
 run("document.getElementById('typed').value='eu '+session.queue[0].w.eu;writeAnswer()");assert.equal(run('session.answered'),true);
-assert.equal(run("normalize(' eu FACO ')"),'faco');
+assert.equal(run("normalize(' eu FA\\u00c7O ')"),'faco');
 run("screen='home';go('dictionary');document.getElementById('search').value='falar';dictionaryResults()");assert.ok(el('word-list').innerHTML.includes('eu falo'));assert.ok(!el('word-list').innerHTML.includes('eu como'));
 run("start('n9')");assert.equal(run('session.queue[0].kind'),'meaning');assert.equal(run('session.lesson.words.length'),10);
 assert.equal(run("normalize('<script>')"),'<script>');assert.equal(run("esc('<script>')"),'&lt;script&gt;');
