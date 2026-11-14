@@ -14,6 +14,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Validate curriculum and exercises
+        run: node check.cjs
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
