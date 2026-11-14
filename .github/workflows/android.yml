@@ -2,7 +2,10 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
+concurrency:
+  group: bora-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,16 +20,62 @@ jobs:
           java-version: 21
       - name: Install dependencies
         run: npm install
-      - name: Prepare web assets
-        run: test -f www/index.html
+      - name: Prepare Bora identity
+        run: |
+          node -e "const fs=require('fs');fs.writeFileSync('capacitor.config.json',JSON.stringify({appId:'br.bora.civic',appName:'Bora',webDir:'www',server:{androidScheme:'https'}}))"
+          test -f www/index.html
       - name: Add Android platform
         run: npx cap add android
       - name: Sync web assets
         run: npx cap sync android
+      - name: Create Civic launcher and splash artwork
+        run: |
+          python -m pip install Pillow
+          python - <<'PY'
+          import re, base64, io
+          from pathlib import Path
+          from PIL import Image
+          text=Path('www/index.html').read_text()
+          match=re.search(r"const HERO='data:image/jpeg;base64,([^']+)'",text)
+          if not match:
+              raise RuntimeError('Civic illustration missing')
+          image=Image.open(io.BytesIO(base64.b64decode(match[1]))).convert('RGB')
+          res=Path('android/app/src/main/res')
+          for density, size in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)]:
+              folder=res/('mipmap-'+density)
+              folder.mkdir(parents=True,exist_ok=True)
+              for name in ['ic_launcher.png','ic_launcher_round.png']:
+                  image.resize((size,size),Image.Resampling.LANCZOS).save(folder/name)
+              canvas=Image.new('RGB',(size*3,size*3),'#063e30')
+              art=image.resize((size*2,size*2),Image.Resampling.LANCZOS)
+              canvas.paste(art,(size//2,size//2))
+              canvas.save(folder/'ic_launcher_foreground.png')
+          adaptive=res/'mipmap-anydpi-v26'
+          adaptive.mkdir(parents=True,exist_ok=True)
+          for name in ['ic_launcher.xml','ic_launcher_round.xml']:
+              (adaptive/name).write_text('<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/bora_green"/><foreground android:drawable="@mipmap/ic_launcher_foreground"/></adaptive-icon>')
+          values=res/'values'
+          (values/'bora_colors.xml').write_text('<resources><color name="bora_green">#063e30</color></resources>')
+          for file in res.glob('drawable*/splash.png'):
+              old=Image.open(file)
+              width,height=old.size
+              canvas=Image.new('RGB',(width,height),'#063e30')
+              size=int(min(width,height)*0.68)
+              canvas.paste(image.resize((size,size),Image.Resampling.LANCZOS),((width-size)//2,(height-size)//2))
+              canvas.save(file)
+          gradle=Path('android/app/build.gradle')
+          config=gradle.read_text().replace('versionCode 1','versionCode 300').replace('versionName "1.0"','versionName "3.0"')
+          gradle.write_text(config)
+          PY
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug
+      - name: Package APK and source
+        run: |
+          mkdir -p deliverables
+          cp android/app/build/outputs/apk/debug/app-debug.apk deliverables/Bora-Civic-v3.apk
+          git archive --format=zip HEAD -o deliverables/Bora-Civic-v3-source.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: BRASILEIRO-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Bora-Civic-v3
+          path: deliverables/*
