@@ -31,7 +31,7 @@ const MASCOT='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAooAAADZCAYAAACn8RH8
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const localDay=(d=new Date())=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 const emptyState=()=>({version:3,xp:0,streak:0,lastDay:'',days:{},words:{},sound:true});
-let state;try{state={...emptyState(),...JSON.parse(localStorage.getItem('bora_civic_v3')||'{}')}}catch{state=emptyState()}
+let state;
 let screen='home',tab='verbs',dictionaryTab='all',session=null,audioCtx=null;
 const verbs=DATA.verbs.map(v=>({...v,type:'verb',id:'v:'+v.inf}));
 const topics=DATA.topics.map((t,i)=>({...t,id:'n'+i,words:t.words.map((w,j)=>({...w,type:'noun',id:'n:'+i+':'+j,topic:t.title}))}));
@@ -45,7 +45,7 @@ const funkTopics = extraPhraseTopics.map(([title, emoji, entries], i) => ({
 const allWords=[...verbs,...topics.flatMap(t=>t.words),...phraseTopics.flatMap(t=>t.words), ...funkTopics.flatMap(t=>t.words)];const byId=new Map(allWords.map(w=>[w.id,w]));
 const verbGroups=DATA.verbThemes.map((t,i)=>({...t,id:'g'+i,words:t.verbs.map(inf=>verbs.find(v=>v.inf===inf))}));
 const packs=[];verbGroups.forEach(g=>{g.children=[];for(let i=0;i<g.words.length;i+=10){const p={id:'v'+packs.length,title:g.title+' · '+(1+i/10),emoji:g.emoji,groupId:g.id,words:g.words.slice(i,i+10)};g.children.push(p);packs.push(p)}});
-function save(){try{localStorage.setItem('bora_civic_v3',JSON.stringify(state))}catch{toast('Не удалось сохранить прогресс. Проверь свободное место.')}}
+function save(){return persist();}
 function toast(t){$('toast').textContent=t;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',3500)}
 function initAudio(){try{audioCtx??=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume()}catch{}}
 function sound(ok){if(!state.sound)return;initAudio();if(!audioCtx)return;try{const t=audioCtx.currentTime;const tones=ok?[[523.25,0,.12],[659.25,.10,.13],[783.99,.21,.23]]:[[220,0,.15],[164.81,.13,.22]];tones.forEach(([freq,delay,dur])=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=ok?'sine':'triangle';o.frequency.value=freq;g.gain.setValueAtTime(.0001,t+delay);g.gain.exponentialRampToValueAtTime(.14,t+delay+.015);g.gain.exponentialRampToValueAtTime(.0001,t+delay+dur);o.connect(g);g.connect(audioCtx.destination);o.start(t+delay);o.stop(t+delay+dur+.02)})}catch{}}
@@ -55,7 +55,7 @@ function dueWords(){return allWords.filter(w=>state.words[w.id]&&state.words[w.i
 function mark(w,ok){let old=state.words[w.id]||{wins:0,interval:0};let interval=ok?Math.min(30,old.interval?old.interval*2:1):0;state.words[w.id]={wins:ok?old.wins+1:Math.max(0,old.wins-1),interval,due:localDay(new Date(Date.now()+interval*86400000))};save()}
 function activity(){const now=localDay();if(state.lastDay!==now){const y=new Date();y.setDate(y.getDate()-1);state.streak=state.lastDay===localDay(y)?state.streak+1:1;state.lastDay=now}state.days[now]=(state.days[now]||0)+1;save()}
 function activeStreak(){const y=new Date();y.setDate(y.getDate()-1);return [localDay(),localDay(y)].includes(state.lastDay)?state.streak:0}
-function progress(t){return Math.round(t.words.filter(mastered).length/t.words.length*100)}
+function progress(t){if(state.completedLevels?.[t.id])return 100;return Math.round(t.words.filter(mastered).length/t.words.length*100)}
 function home(){let learned=allWords.filter(mastered).length,daily=state.days[localDay()]||0;let next=packs.find(p=>progress(p)<100)||packs[0];$('view').innerHTML=`<section class="hero"><img src="${HERO}" alt="Тёмно-зелёный Honda Civic на фоне заката в Рио"><div class="hero-copy"><div class="eyebrow">Твой маршрут в Бразилию</div><h1>Bora<br>aprender?</h1><p>Поехали учить живой португальский.<br>Одно слово — ещё один поворот.</p></div></section><div class="stats"><div class="stat"><b>${activeStreak()}</b><small>дней подряд</small></div><div class="stat"><b>${state.xp}</b><small>опыт · XP</small></div><div class="stat"><b>${learned}</b><small>слов закреплено</small></div></div><div class="content" style="padding-top:0"><div class="card daily"><div class="eyebrow">Ежедневный заезд</div><h2>${daily>=10?'Цель выполнена!':'10 ответов сегодня'}</h2><p>${Math.min(daily,10)} из 10 · небольшие шаги каждый день</p><div class="bar"><i style="width:${Math.min(daily/10,1)*100}%"></i></div><button class="btn wide" data-start="${next.id}">Продолжить маршрут →</button></div><div class="card"><div class="eyebrow">Pit stop · повторение</div><h3 style="margin:6px 0">${dueWords().length?dueWords().length+' слов ждут тебя':'Закрепим изученное'}</h3><p class="muted" style="margin:5px 0 15px">Ошибки возвращаются в тренировку.</p>${recallButtons('review')}</div><button class="phrase-banner" data-go="funk"><span class="big">🎧</span><span><b>Бразильский фанк и сленг</b><small>Танец, бит, флирт и слова из наших уроков →</small></span></button><button class="phrase-banner" data-go="phrases"><span class="big">💬</span><span><b>На все случаи жизни</b><small>128 фраз · кафе, работа, гараж, поездки →</small></span></button><div class="mascot-tip"><img src="${MASCOT}" alt="Твой Civic"><span><b>Civic ждёт твоей победы</b>Заверши урок — и он устроит праздничный заезд.</span></div><div class="section-head"><h2>Твои направления</h2><button class="back" data-go="learn">Все темы →</button></div><div class="topic-grid">${topicTile(packs[0])}${topicTile(topics[9])}${topicTile(topics[10])}${topicTile(topics[0])}</div><p class="footnote">300 глаголов в 18 темах · 128 фраз · ${topics.length} темы · ${topics.reduce((n,t)=>n+t.words.length,0)} существительных<br>Все уроки и звуки работают без интернета.</p></div>`}
 function pronunciationNote(){return '<p class="footnote">Русская запись приблизительная: заглавные слоги показывают ударение, знак ◌̃ — носовой звук. Звуки и ударения зависят от региона Бразилии.</p>'}
 function shuffle(items) {
@@ -181,7 +181,7 @@ async function transferProgress(operation) {
 }
 
 function exportProgress() {
-  const json = JSON.stringify({app: 'bora-civic', state}, null, 2);
+  const json = JSON.stringify({app: 'bora-civic', state});
   const native = backupPlugin();
   if (native) {
     return transferProgress(async () => {
@@ -210,40 +210,8 @@ function chooseProgressFile() {
   });
 }
 
-function profile(){const n=allWords.filter(mastered).length;$('view').innerHTML=`<div class="content"><div class="eyebrow">Seu progresso</div><h2 style="font-size:30px;margin:7px 0 20px">Твой гараж прогресса</h2><img src="${HERO}" alt="Civic Edition" style="width:100%;border-radius:23px;margin-bottom:18px"><div class="card"><span class="badge">BORA · CIVIC EDITION 4.3</span><h2 style="margin:12px 0">${n} / ${allWords.length} слов</h2><div class="bar"><i style="width:${n/allWords.length*100}%"></i></div><div class="progress-numbers"><span>${state.xp} XP</span><span>${activeStreak()} дней подряд</span></div></div><div class="card"><div class="settings-row"><span>Звуки ответов</span><button class="btn secondary" data-sound>${state.sound?'Включены':'Выключены'}</button></div><div class="settings-row"><span>Проверить звук</span><div><button class="back" data-test="1">✓</button> <button class="back" data-test="0">✕</button></div></div></div><div class="card backup-card"><h3>Резервная копия</h3><p class="muted">Сохрани файл в «Загрузки» или на Диск. На другом телефоне или в новой версии Bora открой этот файл здесь.</p><button class="btn wide" data-export ${backupBusy?'disabled':''}>Сохранить прогресс</button><button class="btn secondary wide" data-import ${backupBusy?'disabled':''}>Восстановить из файла</button><input id="import" type="file" accept="application/json,.json" hidden></div><div class="note-box">Инфинитив — форма из словаря: <b>falar</b> (говорить).<br>Presente, eu — «я» сейчас: <b>eu falo</b> (я говорю).<br>Существительные идут с артиклями <b>o / a</b>.</div>${pronunciationNote()}<p class="footnote">Прогресс хранится на этом устройстве. Веб-версия и Android-приложение сохраняют его отдельно. Данные старого BRASILEIRO не удаляются.</p></div>`}
-function restoreProgress(json) {
-  let imported;
-  try {
-    const data = JSON.parse(json);
-    imported = data.state;
-    const object = value => value && typeof value === 'object' && !Array.isArray(value);
-    const counter = value => Number.isSafeInteger(value) && value >= 0;
-    if (data.app !== 'bora-civic' || !object(imported) || !object(imported.words) ||
-        !object(imported.days) || !counter(imported.xp) || !counter(imported.streak) ||
-        typeof imported.lastDay !== 'string') throw Error();
-    for (const [id, word] of Object.entries(imported.words)) {
-      if (!byId.has(id) || !word || !counter(word.wins) || !counter(word.interval) ||
-          typeof word.due !== 'string') throw Error();
-    }
-    if (!Object.values(imported.days).every(counter)) throw Error();
-  } catch {
-    toast('Этот файл не удалось прочитать как копию прогресса Bora.');
-    return;
-  }
-
-  if (!confirm('Восстановить прогресс из файла? Текущий прогресс будет заменён.')) return;
-  const restored = {...emptyState(), ...imported, sound: imported.sound !== false};
-  try {
-    localStorage.setItem('bora_civic_v3', JSON.stringify(restored));
-  } catch {
-    toast('Не удалось сохранить прогресс. Проверь свободное место.');
-    return;
-  }
-  state = restored;
-  renderSound();
-  if (screen === 'profile') profile();
-  toast('Прогресс восстановлен.');
-}
+function profile(){const n=allWords.filter(mastered).length;$('view').innerHTML=`<div class="content"><div class="eyebrow">Seu progresso</div><h2 style="font-size:30px;margin:7px 0 20px">Твой гараж прогресса</h2><img src="${HERO}" alt="Civic Edition" style="width:100%;border-radius:23px;margin-bottom:18px"><div class="card"><span class="badge">BORA · CIVIC EDITION 5.0</span><h2 style="margin:12px 0">${n} / ${allWords.length} слов</h2><div class="bar"><i style="width:${n/allWords.length*100}%"></i></div><div class="progress-numbers"><span>${state.xp} XP</span><span>${activeStreak()} дней подряд</span></div></div><div class="card"><div class="settings-row"><span>Звуки ответов</span><button class="btn secondary" data-sound>${state.sound?'Включены':'Выключены'}</button></div><div class="settings-row"><span>Проверить звук</span><div><button class="back" data-test="1">✓</button> <button class="back" data-test="0">✕</button></div></div></div><div class="card backup-card"><h3>Резервная копия</h3><p class="muted">Сохрани файл в «Загрузки» или на Диск. На другом телефоне или в новой версии Bora открой этот файл здесь.</p><button class="btn wide" data-export ${backupBusy?'disabled':''}>Сохранить прогресс</button><button class="btn secondary wide" data-import ${backupBusy?'disabled':''}>Восстановить из файла</button><input id="import" type="file" accept="application/json,.json" hidden></div><div class="note-box">Инфинитив — форма из словаря: <b>falar</b> (говорить).<br>Presente, eu — «я» сейчас: <b>eu falo</b> (я говорю).<br>Существительные идут с артиклями <b>o / a</b>.</div>${pronunciationNote()}<p class="footnote">Прогресс хранится на этом устройстве. Веб-версия и Android-приложение сохраняют его отдельно. Данные старого BRASILEIRO не удаляются.</p></div>`}
+function restoreProgress(json){return restoreChecked(json);}
 
 async function importProgress(file) {
   try {
@@ -287,9 +255,9 @@ function getLesson(id) {
   return [...verbGroups, ...packs, ...topics, ...phraseTopics, ...funkTopics].find(t => t.id === id);
 }
 function topicTile(t){const p=progress(t);return `<button class="topic ${t.words[0].type==='phrase'?'phrase-topic':''}" data-lesson="${t.id}"><span class="emoji">${t.emoji}</span><b>${esc(t.title)}</b><small>${t.words.length} ${t.id.startsWith('p')?'фраз':t.id.startsWith('g')?'глаголов':'слов'} · ${p}% закреплено</small><div class="mini"><i style="width:${p}%"></i></div></button>`}
-function wordRow(w){return `<div class="row"><span class="article">${w.type==='verb'?'инфинитив':w.type==='phrase'?'слово или выражение':w.word.startsWith('a ')?'женский род':'мужской род'}</span>${mastered(w)?'<span class="check">✓</span>':''}<div class="${w.type==='phrase'?'phrase-line':'word'}">${esc(w.inf||w.word)}</div><div class="pron">${esc(w.pron)}</div>${w.type==='verb'?`<div class="form">eu ${esc(w.eu)}</div><div class="pron">эу ${esc(w.euPron)}</div>`:''}<div class="translation">${esc(w.meaning)}</div>${w.note ? `<p class="word-note">${esc(w.note)}</p>` : ''}</div>`}
+function wordRow(w){return `<div class="row"><span class="article">${w.type==='verb'?'инфинитив':w.type==='phrase'?'слово или выражение':w.type==='basic'?'базовая лексика':w.word.startsWith('a ')?'женский род':'мужской род'}</span>${mastered(w)?'<span class="check">✓</span>':''}<div class="${w.type==='phrase'?'phrase-line':'word'}">${esc(w.inf||w.word)}</div><div class="pron">${esc(w.pron)}</div>${w.type==='verb'?`<div class="form">eu ${esc(w.eu)}</div><div class="pron">эу ${esc(w.euPron)}</div>`:''}<div class="translation">${esc(w.meaning)}</div>${w.note ? `<p class="word-note">${esc(w.note)}</p>` : ''}</div>`}
 function lesson(id){const t=getLesson(id);if(!t)return;stopVictory();screen='lesson';nav();const group=t.id.startsWith('g'),phrase=t.id.startsWith('p'),first=group?(t.children.find(c=>progress(c)<100)||t.children[0]):t;const back=lessonPage(id);$('view').innerHTML=`<div class="content"><button class="back" data-go="${back}">← ${back==='phrases'?'Все ситуации':'Все темы'}</button><div class="lesson-head"><div class="lesson-icon">${t.emoji}</div><div><h2>${esc(t.title)}</h2><p class="muted">${t.words.length} ${phrase?'фраз':'слов'} · ${progress(t)}% закреплено</p></div></div><div class="card"><h3>Пройти небольшими блоками</h3>${blockButtons(blocks.filter(b=>b.parent===(t.groupId||t.id)))}</div>${recallButtons(first.id)}<div class="actions"><button class="btn secondary" data-quiz="${first.id}">Выбор ответа</button>${t.words[0].type==='verb'?`<button class="btn secondary" data-write="${first.id}">Написать eu</button>`:''}</div>${group?`<div class="lesson-chunks">${t.children.map((c,i)=>`<button class="chunk" data-lesson="${c.id}"><span><b>Урок ${i+1}</b><small>${c.words.length} глаголов · ${progress(c)}% закреплено<br>${c.words.slice(0,3).map(w=>esc(w.inf)).join(', ')}…</small></span><span class="arrow">→</span></button>`).join('')}</div>`:''}<div class="card">${t.words.map(wordRow).join('')}</div>${pronunciationNote()}</div>`;window.scrollTo(0,0)}
-function finish(){const s=session;if(!s||s.finished)return;s.finished=true;save();const total=s.lesson.words.length,accuracy=s.attempts?Math.round(s.firstRight/total*100):0,phrase=s.lesson.words[0]?.type==='phrase';$('view').innerHTML=`<div class="content"><div class="result"><div class="eyebrow">Уровень пройден</div><h1>Boa, Илья!</h1><p>Ты прошёл «${esc(s.lesson.title)}».<br>${s.repeats?'Все ошибки разобраны повторно.':'Чистый круг — без ошибок!'}</p>${victoryScene()}<div class="result-stats"><div><b>+${s.awarded.size*10}</b><small>XP за урок</small></div><div><b>${accuracy}%</b><small>с первого раза</small></div><div><b>${total}</b><small>${phrase?'фраз пройдено':'слов пройдено'}</small></div></div><button class="btn wide" data-next-pack>Следующий маршрут →</button><div style="margin-top:14px"><button class="btn secondary wide" data-go="home">На главную</button></div><p class="footnote">Звуки мотора и отстрелов отключаются кнопкой ♪ сверху. Проезд синхронизирован с твоей записью. Прогресс сохранён.</p></div></div>`;playVictory()}
+function finish(){const s=session;if(!s||s.finished)return;s.finished=true;if(s.lesson.id!=='review'){state.completedLevels[s.lesson.id]=true;}save();const total=s.lesson.words.length,accuracy=s.attempts?Math.round(s.firstRight/total*100):0,phrase=s.lesson.words[0]?.type==='phrase';$('view').innerHTML=`<div class="content"><div class="result"><div class="eyebrow">Уровень пройден</div><h1>Boa, Илья!</h1><p>Ты прошёл «${esc(s.lesson.title)}».<br>${s.repeats?'Ошибки сохранены для повторения.':'Чистый круг — без ошибок!'}</p>${victoryScene()}<div class="result-stats"><div><b>+${s.awarded.size*10}</b><small>XP за урок</small></div><div><b>${accuracy}%</b><small>с первого раза</small></div><div><b>${total}</b><small>${phrase?'фраз пройдено':'слов пройдено'}</small></div></div><button class="btn wide" data-next-pack>Следующий маршрут →</button><div style="margin-top:14px"><button class="btn secondary wide" data-go="home">На главную</button></div><p class="footnote">Звуки мотора и отстрелов отключаются кнопкой ♪ сверху. Проезд синхронизирован с твоей записью. Прогресс сохранён.</p></div></div>`;playVictory()}
 function nextPack() {
   stopVictory();
   const {lesson, mode} = session;
@@ -315,5 +283,7 @@ document.addEventListener('submit',e=>{if(e.target.id==='write-form'){e.preventD
 <script src="review.js"></script>
 <script src="lessons.js"></script>
 <script src="calendar.js"></script>
+<script src="statistics.js"></script>
+<script src="storage.js"></script>
 <script src="course.js"></script>
 </body></html>

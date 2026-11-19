@@ -67,7 +67,7 @@ function selectedReviews(n,day=localDay()){
 function weakRows(){
   return Object.entries(state.skills||{}).filter(([k,s])=>s.checks&&describeKey(k)&&
     (s.status==='red'||(s.status!=='green'&&(s.firstWrong||s.hints)))).sort((a,b)=>rankSkill(b[1],localDay()).score-rankSkill(a[1],localDay()).score)
-    .filter(([k])=>weakFilter==='Все'||describeKey(k).category===weakFilter||(weakFilter==='Фразы из фонка'&&describeKey(k).w.id.startsWith('f:')));
+    .filter(([k])=>weakFilter==='Все'||describeKey(k).category===weakFilter||(weakFilter==='Сленг'&&describeKey(k).w.id.startsWith('f:')&&Number(describeKey(k).w.id.split(':')[1])>=2));
 }
 const percent=(n,total)=>total?Math.round(100*n/total)+'%':'—';
 function trend(s){
