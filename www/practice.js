@@ -2,6 +2,8 @@ const Bora = {pages:{grammar:grammarPage}};
 const newId = () => globalThis.crypto?.randomUUID?.() || Date.now().toString(36)+Math.random().toString(36).slice(2);
 function beginPractice(title,queue,date='') {
   if(!queue.length){toast('Пока нет заданий для этой тренировки.');return;}
+  const old=state.practice;
+  if(old?.date&&!old.finished&&state.calendar?.[old.date]?.status==='active')state.calendar[old.date].paused=old;
   state.practice={id:newId(),title,queue,index:0,date,finished:false};
   screen='practice';nav();save();showPractice();
 }
@@ -33,6 +35,7 @@ function advancePractice(){
   if(!q||(!q.solved&&q.mode!=='intro'&&!q.skipped))return;
   Bora.beforeAdvance?.(s,q);
   s.index++;
+  if(s.date&&state.calendar?.[s.date]){state.calendar[s.date].cursor=s.index;state.calendar[s.date].total=s.queue.length;}
   if(s.index===s.queue.length){
     s.finished=true;Bora.complete?.(s);save();screen='result';nav();
     $('view').innerHTML='<div class="content result"><h1>Mandou bem!</h1><p>'+esc(s.title)+' · тренировка завершена.</p>'+victoryScene()+'<button class="btn wide" data-go="home">На главную</button></div>';playVictory();return;
