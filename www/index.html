@@ -134,10 +134,11 @@ function writeAnswer(){if(!session||session.answered||session.revealed)return;co
   }
   submitAnswer(normalize(value)===normalize(question.w.eu));
 }
-function submitAnswer(ok,choice){const s=session;if(!s||s.answered)return;s.answered=true;const q=s.queue[s.index],w=q.w;s.attempts++;if(ok&&!q.retry)s.firstRight++;if(!ok){s.queue.push({...q,retry:true});s.repeats++}mark(w,ok);activity();if(ok&&!s.awarded.has(w.id)){s.awarded.add(w.id);state.xp+=10;save()}sound(ok);document.querySelectorAll('.option').forEach((b,i)=>{b.disabled=true;if(s.options[i]===answerText(q))b.classList.add('correct');else if(i===choice)b.classList.add('wrong')});if($('typed')){$('typed').disabled=true;$('write-form').querySelector('button').disabled=true}$('flash-actions')?.replaceChildren();$('feedback').className='feedback'+(ok?'':' bad');$('feedback').innerHTML=`<b>${ok?'Muito bem! Правильно':'Почти! Попробуем ещё раз'}</b>${answerDetails(w)}<button class="btn wide" data-next>${s.index===s.queue.length-1?'Результат':'Дальше →'}</button>`;$('feedback').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'})}
+function submitAnswer(ok,choice){const s=session;if(!s||s.answered)return;s.answered=true;const q=s.queue[s.index],w=q.w;legacyAnswer(s,q,ok);s.attempts++;if(ok&&!q.retry&&!s.revealed)s.firstRight++;if(!ok&&!q.retry){s.queue.splice(Math.min(s.index+7,s.queue.length),0,{...q,probe:undefined,retry:true});s.repeats++}mark(w,ok);activity();if(ok&&!s.awarded.has(w.id)){s.awarded.add(w.id);state.xp+=10;save()}sound(ok);document.querySelectorAll('.option').forEach((b,i)=>{b.disabled=true;if(s.options[i]===answerText(q))b.classList.add('correct');else if(i===choice)b.classList.add('wrong')});if($('typed')){$('typed').disabled=true;$('write-form').querySelector('button').disabled=true}$('flash-actions')?.replaceChildren();$('feedback').className='feedback'+(ok?'':' bad');$('feedback').innerHTML=`<b>${ok?'Muito bem! Правильно':'Почти! Попробуем ещё раз'}</b>${answerDetails(w)}<button class="btn wide" data-next>${s.index===s.queue.length-1?'Результат':'Дальше →'}</button>`;$('feedback').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'})}
 function next(){if(!session?.answered)return;session.index++;renderQuestion();window.scrollTo(0,0)}
 function reveal(typedAnswer = '') {
   if (!session || session.revealed || session.answered) return;
+  legacyReveal(session,session.queue[session.index],typedAnswer);
   session.revealed = true;
   const word = session.queue[session.index].w;
   $('write-form').hidden = true;
@@ -310,5 +311,6 @@ document.addEventListener('submit',e=>{if(e.target.id==='write-form'){e.preventD
 <script src="verb-context.js"></script>
 <script src="grammar.js"></script>
 <script src="practice.js"></script>
+<script src="memory.js"></script>
 <script src="course.js"></script>
 </body></html>
