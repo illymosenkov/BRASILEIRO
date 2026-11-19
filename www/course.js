@@ -8,7 +8,7 @@ Bora.afterPage=s=>{
     if(state.practice&&!state.practice.finished&&!state.practice.date)$('view').querySelector('.daily')?.insertAdjacentHTML('afterend','<button class="btn secondary wide" data-resume-practice>Продолжить свободную тренировку</button>');
   }
   if(s==='profile')$('view').querySelector('.backup-card')?.insertAdjacentHTML('beforebegin',measuredStats());
-  if(s==='home'||s==='profile')$('view').querySelector('.content')?.insertAdjacentHTML('afterbegin',links([['calendar','Учебный план'],['blocks','Короткие темы'],['grammar','Спряжения'],['reviews','Повторения'],['weak','Слабые слова'],['preferences','Настройки']]));
+  if(s==='home'||s==='profile')(s==='home'?$('view').querySelector('.daily'):$('view').querySelector('.content'))?.insertAdjacentHTML(s==='home'?'afterend':'afterbegin',links([['calendar','Учебный план'],['blocks','Короткие темы'],['grammar','Спряжения'],['reviews','Повторения'],['weak','Слабые слова'],['preferences','Настройки']]));
 };
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&state&&state.calendarDay!==localDay()&&['home','calendar'].includes(screen))go(screen);

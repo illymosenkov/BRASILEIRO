@@ -18,7 +18,7 @@ import java.nio.charset.StandardCharsets;
 
 @CapacitorPlugin(name = "BoraBackup")
 public class BoraBackupPlugin extends Plugin {
-    private static final int MAX_BACKUP_BYTES = 1024 * 1024;
+    private static final int MAX_BACKUP_BYTES = 16 * 1024 * 1024;
 
     @PluginMethod
     public void saveBackup(PluginCall call) {

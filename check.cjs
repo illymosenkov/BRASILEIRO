@@ -1,13 +1,11 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const html=fs.readFileSync(__dirname+'/www/index.html','utf8');
 const data=JSON.parse(html.match(/<script id="bora-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
-const script=[...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)][1][1];
-const elements=new Map(),saved=new Map();
-function el(id){if(!elements.has(id))elements.set(id,{textContent:id==='bora-data'?JSON.stringify(data):'',style:{},innerHTML:'',value:'',setAttribute(){},scrollIntoView(){},querySelector(){return {disabled:false}},focus(){}});return elements.get(id)}
-const context=vm.createContext({console,Date,Math,Map,Set,JSON,Number,String,Blob,URL,setTimeout:()=>{},clearTimeout(){},confirm:()=>true,matchMedia:()=>({matches:true}),document:{getElementById:el,addEventListener(){},querySelectorAll:()=>[],createElement:()=>({click(){}})},localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},window:{scrollTo(){}},AudioContext:undefined});
-vm.runInContext(script,context);
-function run(s){return vm.runInContext(s,context)}
-assert.equal(run('verbs.length'),300);assert.equal(run('new Set(verbs.map(v=>v.inf)).size'),300);assert.equal(run('topics.length'),24);assert.equal(run('allWords.length'),668);
+const {app}=require('./tests/dom.cjs');
+const harness=app(),context=harness.w,run=harness.run;
+const el=id=>context.document.getElementById(id);
+run('state.sound=false;save()');
+assert.equal(run('verbs.length'),300);assert.equal(run('new Set(verbs.map(v=>v.inf)).size'),300);assert.equal(run('topics.length'),24);assert.equal(run('allWords.length'),773);
 for(const v of data.verbs)assert.ok(v.inf&&v.eu&&v.meaning&&v.pron&&v.euPron);
 assert.equal(run("verbs.find(v=>v.inf==='fazer').eu"),'faço');assert.equal(run("verbs.find(v=>v.inf==='pedir').eu"),'peço');assert.equal(run("verbs.find(v=>v.inf==='dirigir').eu"),'dirijo');
 run("start('v0')");assert.equal(run('session.queue.length'),10);
@@ -16,8 +14,8 @@ run('submitAnswer(true)');assert.equal(run('state.xp'),0,'double-click must not 
 run('next()');run('submitAnswer(true)');assert.equal(run('state.xp'),10);
 run('while(!session.finished){if(!session.answered)submitAnswer(true);else next()}');
 assert.equal(run('session.finished'),true);assert.equal(run('session.firstRight'),9);assert.equal(run('state.xp'),100);assert.equal(run('session.repeats'),1);
-assert.equal(run('state.streak'),1);assert.equal(JSON.parse(saved.get('bora_civic_v3')).xp,100);
-run("start('v0','flash');reveal();submitAnswer(true)");assert.equal(run('session.index'),1);assert.ok(run('session.lesson.words.some(mastered)'));
+assert.equal(run('state.streak'),1);assert.equal(JSON.parse(context.localStorage.getItem('bora_civic_v5')).xp,100);
+run("start('v0','pt-ru');reveal();submitAnswer(true);next()");assert.equal(run('session.index'),1);assert.ok(run('session.lesson.words.some(mastered)'));
 run("start('v0','write');document.getElementById('typed').value='';writeAnswer()");assert.equal(run('session.answered'),false);
 run("document.getElementById('typed').value='eu '+session.queue[0].w.eu;writeAnswer()");assert.equal(run('session.answered'),true);
 assert.equal(run("normalize(' eu FAÇO ')"),'faco');
@@ -47,3 +45,5 @@ run('toggleSound()');assert.equal(run('victoryBus.gain.value'),0);run('stopVicto
 assert.ok(run('civicPosition(0)===-145&&civicPosition(1.3)===0&&civicPosition(2.399)===0&&civicPosition(2.4)===0&&civicPosition(2.8)>0&&civicPosition(3.21)===175'));
 const audio=html.match(/const CIVIC_TRACK='data:audio\/mp4;base64,([^']+)'/)[1];assert.ok(Buffer.from(audio,'base64').length===64942);
 console.log('PASS: 300 verbs in 18 themes, 240 nouns, 128 phrases, practice, progress, phrase search, result mascot, timed pops and cancellation.');
+
+setImmediate(()=>harness.dom.window.close());
