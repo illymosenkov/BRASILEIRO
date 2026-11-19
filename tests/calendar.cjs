@@ -22,3 +22,20 @@ for(const item of [a,b,c,d,e]){assert.deepEqual(item.errors,[]);item.dom.window.
 console.log('Calendar: New Year boundary, saved queue, extracurricular interruption, missed days, stable reopening, load and explicit completion OK.');
 
 })().catch(err=>{console.error(err);process.exitCode=1});
+
+{
+ const learner=app({},'2026-10-24T23:30:00');
+ const {run}=learner;
+ run("go('blocks');const b=blocks[0];beginPractice(b.title,lessonQueue(b.ids));while(!state.practice.finished){if(activeTask().mode!=='intro')gradePractice(activeTask().answers[0]);advancePractice();}");
+ assert.ok(run("ensureCalendar().blocks.flatMap(b=>b.ids).every(id=>!seenWord(id))"));
+ assert.equal(run("shiftDay('2026-10-24',2)"),'2026-10-26');
+ run("state.calendar={};state.words={};state.exposure={};state.skills={};state.preferences.intensity='normal';");
+ const count=()=>run("planFor('2026-10-26').blocks.flatMap(b=>b.ids).length");
+ const initial=count();
+ run(`for(let i=0;i<4;i++)recordEvent(state,{key:wordKey(verbs[i].id,'ru-pt'),mode:'recall'},'wrong','first','2026-10-24');`);
+ assert.equal(count(),initial);
+ run(`for(let i=4;i<8;i++)recordEvent(state,{key:wordKey(verbs[i].id,'ru-pt'),mode:'recall'},'wrong','second','2026-10-25');`);
+ assert.ok(count()<initial);assert.ok(count()>0);
+ setImmediate(()=>learner.dom.window.close());
+ console.log('Free study refreshes today, DST day math, sustained difficulty changes new workload, one session does not.');
+}

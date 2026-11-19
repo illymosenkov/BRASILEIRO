@@ -77,11 +77,17 @@ function trend(s){
   const delta=Math.round(100*(rate(h.slice(-n))-rate(h.slice(-2*n,-n))));
   return (delta>0?'+':'')+delta+' п. п. за последние '+n+' проверок';
 }
+function difficultVerbs(rows){
+ const tally=new Map();
+ for(const [key,s] of rows){const {w}=describeKey(key);if(w.type==='verb')tally.set(w.inf,(tally.get(w.inf)||0)+s.errors);}
+ const leaders=[...tally].filter(([,n])=>n).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ return leaders.length?'<details class="card"><summary>Глаголы с наибольшим числом ошибок</summary>'+leaders.map(([v,n])=>'<p>'+esc(v)+' · '+n+'</p>').join('')+'</details>':'';
+}
 function weakPage(){
   const rows=weakRows();
   $('view').innerHTML='<div class="content"><h2>Мои слабые слова</h2><label class="field">Материал<select class="input" id="weak-filter">'+['Все','Обычные слова','Глаголы','Спряжения','Разговорные выражения','Сленг','Фразы из фонка'].map(x=>'<option '+(x===weakFilter?'selected':'')+'>'+x+'</option>').join('')+'</select></label>'+
     (rows.length?'<button class="btn wide" data-errors>Работа над ошибками · '+Math.min(10,rows.length)+'</button>':'<p class="note-box">Пока нет ошибок в этой категории. Результаты появятся после проверочных упражнений.</p>')+
-    rows.map(([k,s])=>'<div class="card"><b>'+esc(describeKey(k).title)+'</b><p>'+knowledge[s.status]+' · ошибок '+s.errors+' · с первого раза '+percent(s.firstRight,s.checks)+'</p><small>'+trend(s)+'<br>Последний ответ '+s.last+' · следующее повторение '+s.due+'</small></div>').join('')+'</div>';
+    difficultVerbs(rows)+rows.map(([k,s])=>'<div class="card"><b>'+esc(describeKey(k).title)+'</b><p><span class="skill-state '+s.status+'">'+knowledge[s.status]+'</span>'+' · ошибок '+s.errors+' · с первого раза '+percent(s.firstRight,s.checks)+'</p><small>'+trend(s)+'<br>Последний ответ '+s.last+' · следующее повторение '+s.due+'</small></div>').join('')+'</div>';
 }
 function reviewPage(){
   const n=reviewCandidates().length;
@@ -93,7 +99,7 @@ function preferencesPage(){
 }
 function focusValue(){if($('focus-value'))$('focus-value').textContent=settings().focus+'% слабых · '+(100-settings().focus)+'% остальных';}
 Object.assign(Bora.pages,{weak:weakPage,reviews:reviewPage,preferences:preferencesPage});
-document.addEventListener('input',e=>{if(e.target.id==='focus-slider'){settings().focus=+e.target.value;focusValue();save();}});
+document.addEventListener('input',e=>{if(e.target.id==='focus-slider'){settings().focus=+e.target.value;focusValue();Bora.refreshToday?.();save();}});
 document.addEventListener('change',e=>{if(e.target.id==='weak-filter'){weakFilter=e.target.value;weakPage();}});
 document.addEventListener('click',e=>{
  const d=e.target.closest('button')?.dataset;if(!d)return;

@@ -1,15 +1,27 @@
-# Android APK quick build
+# BORA Civic 5.0 для Android
 
-The included GitHub Actions workflow builds a debug APK on every push to `main`/`master` and can also be started manually from **Actions → Build Android APK → Run workflow**. Download the `BRASILEIRO-debug-apk` artifact after the run completes.
+Распространяемый APK использует ту же оболочку Capacitor, адрес WebView и applicationId br.bora.civic43, что и оригинальный выпуск 4.3. VersionCode повышен с 404 до 500. В полном архиве исходников файл base/Bora-Civic-v4.3.apk служит проверяемой зависимостью сборки.
 
-For a local build, install Node.js 22+, JDK 17, Android Studio and the Android SDK, then run:
+## Повторить сборку выпуска
+
+Нужны Python 3, JDK, Android SDK с android.jar, d8 и apksigner и оригинальный ключ выпуска для подписания обновления.
+
+```bash
+bash native/android/build_backup_dex.sh /path/to/android.jar /path/to/d8 backup.dex
+python3 native/package_release.py base/Bora-Civic-v4.3.apk Bora-unsigned.apk backup.dex
+apksigner sign --ks /private/path/bora-release.p12 --out Bora-Civic-v5.0.apk Bora-unsigned.apk
+apksigner verify --verbose --print-certs Bora-Civic-v5.0.apk
+python3 tests/package_check.py base/Bora-Civic-v4.3.apk Bora-Civic-v5.0.apk
+```
+
+SHA-256 сертификата 4.3 и 5.0 — `579a46bdefbdad54b03b801ec469c14c0d160c230a5d93c510cb8b33ea43b2fd`. Закрытый ключ подписи хранится отдельно от публичных исходников. Следующая сессия может работать и тестировать приложение из ветки или ZIP. Для очередного подписанного обновления потребуется доступ к тому же ключу.
+
+## Проверки
 
 ```bash
 npm install
-npx cap add android
-npx cap sync android
-cd android
-./gradlew assembleDebug
+npm test
+node tests/backup.cjs base/Bora-Civic-v4.3.apk
 ```
 
-APK output: `android/app/build/outputs/apk/debug/app-debug.apk`.
+tests/verify_forms.py принимает каталог из 50 словарных страниц INF.html с https://www.conjugacao.com.br/verbo-INF/ (в URL começar → comecar и pôr → por). Проверка сверяет лица и времена, включая написание ударений. tests/browser.cjs — дополнительный сценарий Playwright для среды с Chromium. Веточный workflow запускает Android QA на отдельном ключе и не публикует тестовый APK как пользовательское обновление.

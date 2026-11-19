@@ -1,21 +1,16 @@
-# Bora 4.2 · Civic Edition 🇧🇷
+# BORA Civic 5.0
 
-Offline Brazilian Portuguese app with a green Civic mascot.
+Офлайн-приложение для изучения бразильского португальского с русским интерфейсом. На главной можно начать урок на сегодня. В «Учебном плане» видны даты, выполненные и перенесённые уроки. «Короткие темы» доступны отдельно. Классические темы, словарь, запись мотора и анимация Civic сохранены.
 
-- 300 verbs organized into 18 themes, with lessons of up to 10 verbs.
-- Infinitive and present-tense eu forms, Russian meanings and pronunciation hints.
-- 240 nouns in 24 themes, with gender articles.
-- 128 practical phrases in 16 situations: introductions, understanding, cafe, restaurant, shopping, payments, directions, transport, hotel, work, garage, driving, health, emergencies, friends and daily needs.
-- Phrase flashcards, translation quizzes, eu exercises, error review, XP and local progress.
-- Successful lessons trigger a Civic drive-by with spinning wheels, synchronized exhaust flames, engine sound and the uploaded 3.95-second Civic recording and detected transient flashes. Replay, mute, reduced-motion support and cancellation on navigation/backgrounding are included.
+## Обновление с 4.3
 
-## Source and validation
+1. В BORA 4.3 открой «Прогресс» → «Сохранить прогресс» и сохрани JSON в «Загрузки».
+2. Открой Bora-Civic-v5.0.apk на том же телефоне и выбери «Обновить». Оставь установленную 4.3 и её данные на месте.
+3. Открой «Прогресс» и сравни XP и знакомые слова. При обычном обновлении перенос автоматический. На новом телефоне выбери «Восстановить из файла» и укажи сохранённый JSON.
+4. Для последующих переносов делай копию уже в 5.0. Она содержит историю попыток, формы, календарь, очередь текущего урока и настройки.
 
-The complete app, curriculum and two Civic illustrations are embedded in `www/index.html`. Run `node check.cjs` for learning, grouping, persistence and victory audio checks.
+При несовпадении подписи Android откажет в обновлении. Сохрани установленную версию и её резервную копию. Выпуски 4.2 использовали другой идентификатор пакета. Их доступную копию v3 можно импортировать вручную. Старая версия вычисляла закрепление по wins; исторические первые ответы и факт одноразового завершения урока, отсутствующие в файле, восстановить невозможно.
 
-## Android
+## Разработка
 
-GitHub Actions builds `Bora-Civic-v4.2.apk` and the source ZIP. App name: Bora 4.2. Package: `br.bora.civic41`. It installs separately from v4 because the previous debug key was not retained. Existing app data is untouched; the export/import progress schema and word IDs remain compatible. An explicit signing keystore is configured and cached for future builds of this edition.
-
-Debug build, no account or server. All app content and sounds work offline. Russian pronunciation hints are approximate. The original uploaded AAC recording is embedded without modification; animation follows the Web Audio playback clock.
-\nVictory timing: arrive at center by 1.3 s, hold and synchronize transient flames from 1.3 to 2.4 s, launch at 2.4 s, exit by 3.2 s. Package and signing key are preserved from 4.1.\n
+Открой DEVELOPMENT_PROGRESS.md для продолжения с последнего этапа. Основная веб-страница — www/index.html, учебные модули подключены обычными скриптами, сервер для Android не требуется. BUILD-ANDROID.md описывает проверку и сборку. Из ZIP можно открыть www/index.html в браузере компьютера для ознакомления. Браузер и Android хранят учебный прогресс отдельно.

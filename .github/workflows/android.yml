@@ -3,6 +3,14 @@ on:
   workflow_dispatch:
   push:
     branches: [bora/personal-plan-v5, main, master]
+    paths:
+      - 'www/**'
+      - 'native/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'capacitor.config.json'
+      - 'check.cjs'
+      - '.github/workflows/android.yml'
 permissions:
   contents: read
 jobs:

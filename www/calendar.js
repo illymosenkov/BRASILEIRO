@@ -7,8 +7,14 @@ function learningProfile(day){
  const recent=Object.values(state.skills||{}).flatMap(s=>s.history.filter(h=>!h.retry&&h.attempts&&dayNumber(day)-dayNumber(h.date)<=14));
  const sessions=new Set(recent.map(h=>h.session)).size;
  const rate=recent.filter(h=>h.first).length/Math.max(1,recent.length);
- const due=reviewCandidates(day).filter(x=>x.weak).length;
- const difficult=sessions>=2&&recent.length>=6&&rate<.65;
+ const due=reviewCandidates(day).filter(x=>x.overdue>0||state.skills?.[x.key]?.due===day).length;
+ const prior=Object.values(state.calendar||{}).filter(p=>p.actual&&p.actual<day).sort((a,b)=>b.actual.localeCompare(a.actual)).slice(0,4);
+ const demanding=prior.filter(p=>{
+   const ids=new Set(p.blocks.flatMap(b=>b.ids));
+   const rows=Object.entries(state.skills||{}).filter(([k])=>ids.has(k.split('|')[1])).flatMap(([,s])=>s.history.filter(h=>h.date===p.actual&&!h.retry&&h.attempts));
+   return ids.size>=5&&rows.length>=4&&rows.filter(h=>h.first).length/rows.length<.65;
+ }).length>=2;
+ const difficult=demanding||(sessions>=2&&recent.length>=6&&rate<.65);
  const strong=sessions>=3&&recent.length>=12&&rate>=.85;
  const grammar=[...new Set(Object.entries(state.skills||{}).filter(([k,s])=>k.startsWith('form|')&&s.streak>=2).map(([k])=>k.split('|')[2]))];
  return {difficult,strong,due,grammar};
@@ -20,7 +26,7 @@ function routeBlocks(day){
  ['p2','base0','g0'],['base0','base1','g2'],['p14','f0','f1']
  ][weekday];
  if(!Object.keys(state.words).length&&!Object.keys(state.exposure||{}).length){
-   order.unshift('p0','base0','g0');
+   order.unshift('base0','p0','g0');
  }
  const preferred=blocks.filter(b=>order.includes(b.parent)).sort((a,b)=>order.indexOf(a.parent)-order.indexOf(b.parent));
  return [...preferred,...blocks.filter(b=>!preferred.includes(b))];
@@ -77,19 +83,31 @@ function ensureCalendar(day=localDay(),replan=false){
      const ids=from.ids.filter(id=>!seenWord(id)).slice(0,today.blocks[0].ids.length);
      today.blocks[0]={id:from.id,title:from.title,ids};
      today.carried=today.carried.filter(c=>c.day!==source.day);today.carried.push({day:source.day,ids});source.status='moved';source.movedTo=day;
-   }else if(old?.carried?.length&&!today.optional){today.blocks=old.blocks;today.carried=old.carried;}
+   }else if(old?.carried?.length&&!today.optional&&today.blocks.length){
+     const first=old.blocks[0];
+     const remaining=first.ids.filter(id=>!seenWord(id)).slice(0,today.blocks[0].ids.length);
+     if(remaining.length){today.blocks[0]={...first,ids:remaining};today.carried=old.carried;}
+   }
  }
  const reserved=new Set(cal[day].blocks.flatMap(b=>b.ids));
  for(let i=1;i<=6;i++){
    const date=shiftDay(day,i);
-   if(!cal[date])cal[date]=planFor(date,reserved);
+   if(!cal[date]||(replan&&cal[date].status==='planned'))cal[date]=planFor(date,reserved);
    cal[date].blocks.forEach(b=>b.ids.forEach(id=>reserved.add(id)));
  }
  state.calendarDay=day;save();return cal[day];
 }
 function makeDailyQueue(plan){
  const queue=plan.blocks.flatMap(b=>lessonQueue(b.ids));
- const practice=[...plan.reviews.map(taskForKey),...plan.grammar.map((k,i)=>{
+ const practice=[...plan.reviews.map(key=>{
+   const q=taskForKey(key),h=state.skills?.[key]?.history||[];
+   const trouble=h.filter(x=>x.errors&&!x.retry).slice(-3);
+   if(q.key.startsWith('form|')&&trouble.length>=2){
+     const [,v,t,p]=key.split('|');
+     if(paradigms[v])return formTask(v,+t,+p,trouble.at(-1).mode==='choice'?'fix':'choice');
+   }
+   return q;
+ }),...plan.grammar.map((k,i)=>{
    const [,v,t,p]=k.split('|');return formTask(v,+t,+p,i?'choice':'recall');
  })];
  // Interleave reviews between short learning sequences.
@@ -122,7 +140,13 @@ function calendarPage(){
  }).join('')+'</div>';
 }
 Bora.pages.calendar=calendarPage;
-Bora.complete=s=>{if(s.date&&state.calendar?.[s.date]){const p=state.calendar[s.date];p.status='done';p.actual=localDay();p.cursor=p.total=s.queue.length;delete p.paused;}};
+Bora.refreshToday=()=>{
+ const day=localDay(),p=state.calendar?.[day];
+ if(!p||p.status!=='planned')return;
+ if(p.blocks.some(b=>b.ids.some(seenWord)))ensureCalendar(day,true);
+ else p.reviews=selectedReviews(paceNames[p.intensity][3],day);
+};
+Bora.complete=s=>{if(!s.date)Bora.refreshToday();if(s.date&&state.calendar?.[s.date]){const p=state.calendar[s.date];p.status='done';p.actual=localDay();p.cursor=p.total=s.queue.length;delete p.paused;}};
 Bora.paceControl=()=>{$('pace').innerHTML='<div class="card"><label class="field">Интенсивность<select class="input" id="intensity">'+Object.entries(paceNames).map(([k,[name,time]])=>'<option value="'+k+'" '+(k===settings().intensity?'selected':'')+'>'+name+' · '+time+'</option>').join('')+'</select></label></div>';};
 document.addEventListener('change',e=>{if(e.target.id==='intensity'){settings().intensity=e.target.value;ensureCalendar(localDay(),true);save();}});
 document.addEventListener('click',e=>{const d=e.target.closest('button')?.dataset;if(!d)return;if('day'in d)startDay();if('week'in d){calendarWeek+=Number(d.week);calendarPage();}});

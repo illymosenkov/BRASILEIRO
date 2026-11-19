@@ -23,7 +23,11 @@ function showPractice() {
 }
 function gradePractice(input){
   const q=activeTask();if(!q||q.solved||q.mode==='intro'||!String(input).trim())return;
-  const normalize=s=>normalizeRecall(s,!q.key.endsWith('|pt-ru'));
+  const portuguese=!q.key.endsWith('|pt-ru');
+  const normalize=s=>{
+    const text=normalizeRecall(s,portuguese);
+    return portuguese?text.replace(/\bpra\b/g,'para').replace(/\bpro\b/g,'para o').replace(/\bpara a (?=casa\b)/g,'para '):text;
+  };
   const ok=q.answers.some(a=>normalize(a)===normalize(input));
   Bora.attempt?.(q,ok,state.practice.id);
   if(ok){q.solved=true;if(!q.retry){state.xp+=5;activity();}}

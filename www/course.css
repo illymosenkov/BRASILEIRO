@@ -1,2 +1,4 @@
 .field{display:grid;gap:5px;margin:12px 0;font-weight:650}.field select{width:100%;min-width:0;font:inherit;color:var(--ink)}details summary{cursor:pointer;padding:10px 0;font-weight:700}.content .back{margin:6px 0}.question-card{overflow-wrap:anywhere}.content select{max-width:100%}.content .card{min-width:0}
 .course-links{flex-wrap:wrap;margin:12px 0;overflow:visible}.course-links .chip{white-space:normal}.question-card{white-space:pre-line}.content .option{overflow-wrap:anywhere}.field input[type=range]{width:100%;accent-color:var(--green)}.daily h2{overflow-wrap:anywhere}
+
+.skill-state,.skill-pron{display:block;font-size:.78rem;line-height:1.45}.skill-state.neutral,.skill-pron{color:#58685f}.skill-state.red{color:#a32630}.skill-state.yellow{color:#775800}.skill-state.green{color:#09613c}.settings-row .skill-pron{font-weight:400}.content button:focus-visible,.content summary:focus-visible{outline:3px solid #c59525;outline-offset:2px}

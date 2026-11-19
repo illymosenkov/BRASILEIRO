@@ -22,7 +22,7 @@ function formTask(v,t,p,mode,advanced=false) {
   const subj = people[p].split('/')[0];
   const right = formOf(v,t,p);
   const prefix = ['Normalmente,','Ontem,','Naquela época,','No próximo ano,','Se pudesse,','Talvez','Amanhã,'][t];
-  const context = advanced && t===5 ? 'É possível que' : advanced && t===4 ? 'Se tivesse a oportunidade,' : prefix;
+  const context = advanced ? ['Pelo que sei,','Segundo a Ana, ontem','Quando era criança,','Pelo que foi combinado, amanhã','Se tivesse a oportunidade,','É possível que','Pelo que combinamos, amanhã'][t] : prefix;
   const frame = context+' '+subj+' ___ '+tail+'.';
   const distractors = shuffle([...new Set([...people.map((_,j)=>formOf(v,t,j)),...tenses.map((_,j)=>formOf(v,j,p))])].filter(x=>x!==right && normalizeRecall(x,true)!==normalizeRecall(right,true)));
   const base = {key:grammarKey(v,t,p), mode, label:v+' · '+people[p]+' · '+tenses[t][0], answers:[right], hint:byId.get('v:'+v).meaning, explanation:frame.replace('___',right), prompt:'Напиши форму для '+people[p]+'.'};
@@ -36,6 +36,9 @@ function formTask(v,t,p,mode,advanced=false) {
     const f=formOf(v,t,0), core=f+' '+tail;
     const answers = t===1?['Eu '+core+' ontem','Ontem eu '+core,core+' ontem','Ontem '+core]:
       t===5?['Talvez eu '+core,'Talvez '+core]:t===2?['Antes eu '+core,'Antes '+core,'Antigamente eu '+core,'Eu '+core+' antes','Antigamente '+core]:['Eu '+core,core];
+    if(t===5) answers.push('É possível que eu '+core,'Pode ser que eu '+core);
+    if(t===2) answers.push('Eu '+core+' antigamente');
+    if(t===4) answers.push('Se pudesse eu '+core);
     if(v==='fazer'&&t===1) answers.push('Eu fiz isto ontem','Ontem eu fiz isto');
     return {...base,key:grammarKey(v,t,0),label:v+' · eu · '+tenses[t][0],prompt,answers,hint:'Начало: '+answers[0].split(' ').slice(0,2).join(' '),explanation:answers[0]+'.'};
   }
@@ -43,6 +46,19 @@ function formTask(v,t,p,mode,advanced=false) {
 }
 const grammarImperfect = Object.fromEntries(Object.keys(verbContexts).map((v,i)=>[v,[
 'я был местным','я был дома','у меня было время','я ходил на пляж','я делал это','я хотел кофе','я мог помочь','я говорил правду','я знал ответ','я видел море','я приходил сюда','я проводил урок','я накрывал на стол','я разговаривал с Аной','я ел рис','я пил воду','я рано ложился спать','я жил в Бразилии','мне нравилась музыка','мне нужна была помощь','я понимал вопрос','я знал город','я находил ключ','я думал об этом','я работал дома','я учил португальский','я покупал хлеб','я продавал книги','я приходил рано','я выходил из дома','я заходил в магазин','я возвращался домой','я оставался дома','я заходил в булочную','я оставлял сообщение','я садился на автобус','я брал с собой телефон','я приносил кофе','я просил счёт','я слушал музыку','я скучал','я встречал Ану','я вызывал такси','я ждал автобус','я начинал курс','я заканчивал курс','я открывал дверь','я закрывал окно','я писал сообщение','я читал книгу'][i]]));
+function pronunciationClue(v,t,p){
+  const form=formOf(v,t,p),w=byId.get('v:'+v);
+  if(t===0&&p===0)return 'эу '+w.euPron;
+  if(t===6)return ['воу','вай','вай','ВА-мус','ва̃у','ва̃у','вай'][p]+' '+w.pron;
+  if(/[ãõ]/.test(form))return 'Носовой звук в '+(form.match(/(?:ão|õe|ãe|ã|õ)/)||[''])[0];
+  if(/[áéíóúêôâ]/.test(form))return 'Ударение на '+form.match(/[áéíóúêôâ]/)[0];
+  if(form.includes('ç'))return 'ç читается как «с»';
+  return '';
+}
+function formRow(v,t,p){
+  const s=state.skills?.[grammarKey(v,t,p)],status=s?.status||'neutral',clue=pronunciationClue(v,t,p);
+  return '<div class="settings-row"><span>'+people[p]+'<small class="skill-state '+status+'">'+knowledge[status]+'</small></span><span><b>'+formOf(v,t,p)+'</b>'+(clue?'<small class="skill-pron">'+esc(clue)+'</small>':'')+'</span></div>';
+}
 function grammarPage() {
   const g=grammarPick, list=Object.keys(verbContexts).filter(v=>!g.irregular||irregular.has(v));
   if(!list.includes(g.verb)) g.verb=list[0];
@@ -55,7 +71,7 @@ function grammarPage() {
     select('verb','Глагол',list.map(k=>[k,k+' — '+byId.get('v:'+k).meaning]),v)+
     select('tense','Время',levelTenses[g.level].map(t=>[t,tenses[t][0]+' · '+tenses[t][2]]),g.tense)+
     '<p><b>'+esc(w.meaning)+'</b> · '+(irregular.has(v)?'неправильный':'правильный')+' · '+esc(w.pron)+'</p><p>Eu '+formOf(v,0,0)+' '+verbContexts[v][0]+'.<br>'+cap(verbContexts[v][1])+'.</p><details><summary>Формы · проверено '+known+' из 7</summary>'+
-    people.map((person,p)=>'<div class="settings-row"><span>'+person+'</span><b>'+formOf(v,g.tense,p)+'</b></div>').join('')+
+    people.map((_,p)=>formRow(v,g.tense,p)).join('')+
     '<p class="muted">A gente означает «мы» и сочетается с формой третьего лица единственного числа.</p></details></div><div class="card">'+
     select('mode','Упражнение',Object.entries(modeNames),g.mode)+'<button class="btn wide" data-practice-grammar>Начать тренировку</button></div></div>';
 }

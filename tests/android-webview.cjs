@@ -1,6 +1,7 @@
 // QA build only: Android WebView exposes its debug socket in the emulator.
 const {execFileSync}=require('node:child_process');
 const assert=require('node:assert/strict');
+const {tapDocumentNode}=require('./documents-ui.cjs');
 const adb=(...args)=>execFileSync('adb',args,{encoding:'utf8'}).trim();
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function connect(){
@@ -32,16 +33,26 @@ async function connect(){
 (async()=>{
  const {run,ws}=await connect();
  try{
- if(process.argv[2]==='legacy'){assert.equal(await run("state.sound=false;start('v0','quiz');while(!session.finished){submitAnswer(true);next();}save();state.xp"),100);return;}
+ console.log('WebView ready',await run("JSON.stringify({origin:location.origin,version:state.version,xp:state.xp,keys:Object.keys(localStorage),legacyXp:JSON.parse(localStorage.getItem('bora_civic_v3')||'null')?.xp,locked:typeof storageBlocked==='undefined'?null:storageBlocked})"));
+ if(process.argv[2]==='reopen'){assert.equal(await run('state.xp'),100);return;}
+ if(process.argv[2]==='legacy'){assert.equal(await run("state.sound=false;start('v0','quiz');while(!session.finished){submitAnswer(true);next();}save();state.xp"),100);assert.equal(await run("JSON.parse(localStorage.getItem('bora_civic_v3')).xp"),100);return;}
  assert.equal(await run('state.xp'),100);
  assert.equal(await run('state.version'),5);
  assert.equal(await run("go('grammar');startGrammar();gradePractice('wrong');gradePractice(activeTask().answers[0]);state.skills[activeTask().key].firstWrong"),1);
  assert.ok(await run("go('profile');!!backupPlugin()"));
  await run("document.querySelector('[data-export]').click();true");await wait(1800);
  assert.match(adb('shell','dumpsys','activity','activities'),/documentsui|DocumentsActivity/i);
- adb('shell','input','keyevent','4');await wait(1000);
- await run("document.querySelector('[data-import]').click();true");await wait(1600);
- assert.match(adb('shell','dumpsys','activity','activities'),/documentsui|DocumentsActivity/i);
- console.log('Emulator: installed update retained 100 XP, WebView practice and Android document pickers opened.');
+ await tapDocumentNode(node=>/resource-id="[^"]*id\/button1"/.test(node)||/text="Save"/i.test(node));
+ await wait(1200);
+ const file=adb('shell','find','/sdcard/Download','-name','bora-progress.json').split('\n')[0];
+ assert.ok(file,'Saved JSON in Downloads');
+ const saved=JSON.parse(adb('shell','cat',file));assert.equal(saved.state.version,5);
+ assert.equal(saved.state.xp,105);
+ await run("state.xp=0;save();window.confirm=()=>true;document.querySelector('[data-import]').click();true");
+ await wait(900);
+ await tapDocumentNode(node=>/text="bora-progress(?:\.json)?"/i.test(node));
+ for(let i=0;i<25&&await run('state.xp')!==105;i++)await wait(300);
+ assert.equal(await run('state.xp'),105);
+ console.log('Emulator: 4.3 update retained 100 XP, 5.0 WebView practice, real Android SAF file export and restore OK.');
  }finally{ws.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
