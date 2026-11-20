@@ -47,7 +47,7 @@ function clozeTask(w){
  const target=w.type==='phrase'?(parts.filter(x=>x.replace(/[^\p{L}]/gu,'').length>=3)[0]||parts[0]).replace(/[^\p{L}-]/gu,''):w.word.replace(/^(o|a|os|as) /,'');
  const at=sentence.toLocaleLowerCase().indexOf(target.toLocaleLowerCase());
  if(at<0||!target)return null;
- return {...wordTask(w.id,'ru-pt'),mode:'cloze',prompt:sentence.slice(0,at)+'___'+sentence.slice(at+target.length),context:ex[1],answers:[target],explanation:sentence};
+ return {...wordTask(w.id,'ru-pt'),key:w.type==='phrase'?'cloze|'+w.id+'|ru-pt':wordKey(w.id,'ru-pt'),mode:'cloze',prompt:sentence.slice(0,at)+'___'+sentence.slice(at+target.length),context:ex[1],answers:[target],explanation:sentence};
 }
 function lessonQueue(ids){
  const queue=[];
@@ -75,6 +75,6 @@ document.addEventListener('click',e=>{
 });
 const memoryAdvance=Bora.beforeAdvance;
 Bora.beforeAdvance=(s,q)=>{
- if(q.mode==='intro'){state.exposure??={};state.exposure[q.key.split('|')[1]]??=localDay();}
+ if(q.mode==='intro'){state.exposure??={};state.exposure[q.key.split('|')[1]]??=localDay();Bora.onKnowledgeChanged(q.key);}
  memoryAdvance(s,q);
 };

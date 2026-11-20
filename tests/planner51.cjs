@@ -1,0 +1,13 @@
+const {app,assert}=require('./dom.cjs');
+const a=app({},'2026-11-23T11:00:00'),{run,click}=a;
+const id=run("ensureCalendar();state.calendar[shiftDay(localDay(),1)].blocks[0].ids[0]");
+a.w.target=id;run("beginPractice('Свободное занятие',[wordTask(target,'ru-pt')]);");
+click('[data-flip]');click('[data-grade=wrong]');run("go('calendar')");
+assert.ok(run("!state.calendar[shiftDay(localDay(),1)].blocks.flatMap(b=>b.ids).includes(target)"));
+assert.ok(run("ensureCalendar().reviews.includes(wordKey(target,'ru-pt'))"));
+run("go('reviews')");click('[data-review-now]');click('[data-flip]');click('[data-grade=right]');
+assert.ok(run("!reviewCandidates().some(x=>x.key===wordKey(target,'ru-pt'))"));
+assert.ok(run("!ensureCalendar().reviews.includes(wordKey(target,'ru-pt'))"));
+assert.ok(run("state.skills[wordKey(target,'ru-pt')].history.map(h=>h.source).join('/')==='topic/review'"));
+const before=run("JSON.stringify(state.calendar)");run("go('calendar');go('home')");assert.equal(run("JSON.stringify(state.calendar)"),before);
+setImmediate(()=>a.dom.window.close());console.log('Catalog, dated plan, independent direction and real review session share one skill; tomorrow and today reconciled.');

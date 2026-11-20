@@ -8,6 +8,7 @@ function checkedState(input){
  const str=v=>typeof v==='string';
  const dict=(v,fn)=>{valid(obj(v));for(const [k,x] of Object.entries(v))valid(fn(k,x));};
  const key=k=>{if(!str(k))return false;const [kind,id,t,p,...rest]=k.split('|');
+   if(kind==='cloze')return byId.get(id)?.type==='phrase'&&t==='ru-pt'&&p===undefined;
    if(kind==='word')return byId.has(id)&&['ru-pt','pt-ru'].includes(t)&&p===undefined;
    return kind==='form'&&byId.has('v:'+id)&&/^[0-6]$/.test(t)&&/^[0-6]$/.test(p)&&!rest.length&&(!!paradigms[id]||(t==='0'&&p==='0'));};
  const task=q=>obj(q)&&key(q.key)&&str(q.mode)&&str(q.prompt)&&str(q.label)&&

@@ -59,11 +59,12 @@ function planFor(day,reserved=new Set()){
 }
 function ensureCalendar(day=localDay(),replan=false){
  state.calendar??={};const cal=state.calendar;
+ replan=replan||!!state.calendarDirty;
  if(state.calendarDay===day&&cal[day]&&!replan)return cal[day];
  const old=cal[day];
  if(!old||old.status==='planned'){
    const today=planFor(day);cal[day]=today;
-   const older=Object.values(cal).filter(p=>p.day<day&&['active','planned','missed'].includes(p.status)).sort((a,b)=>a.day.localeCompare(b.day));
+   const older=Object.values(cal).filter(p=>state.calendarDay!==day&&p.day<day&&['active','planned','missed'].includes(p.status)).sort((a,b)=>a.day.localeCompare(b.day));
    for(const p of older){
      if(p.status==='active'&&!p.paused&&state.practice?.date===p.day)p.paused=state.practice;
      if(p.status!=='missed')p.status='missed';
@@ -71,7 +72,8 @@ function ensureCalendar(day=localDay(),replan=false){
    // Transfer one small unfinished group, keeping its source date and original record.
    const interrupted=older.find(p=>p.paused?.queue?.slice(p.paused.index).some(q=>q.answers));
    if(interrupted&&!today.optional){
-     const todo=[...new Set(interrupted.paused.queue.slice(interrupted.paused.index).filter(q=>q.answers&&!q.solved).map(q=>q.key))].slice(0,Math.min(3,paceNames[today.intensity][3]));
+     const eligible=new Set(reviewCandidates(day).map(x=>x.key));
+     const todo=[...new Set(interrupted.paused.queue.slice(interrupted.paused.index).filter(q=>q.answers&&!q.solved&&eligible.has(q.key)).map(q=>q.key))].slice(0,Math.min(3,paceNames[today.intensity][3]));
      if(todo.length){
        today.reviews=[...new Set([...todo,...today.reviews])].slice(0,Math.max(todo.length,today.reviews.length));
        today.carried.push({day:interrupted.day,ids:[]});interrupted.status='moved';interrupted.movedTo=day;
@@ -95,7 +97,7 @@ function ensureCalendar(day=localDay(),replan=false){
    if(!cal[date]||(replan&&cal[date].status==='planned'))cal[date]=planFor(date,reserved);
    cal[date].blocks.forEach(b=>b.ids.forEach(id=>reserved.add(id)));
  }
- state.calendarDay=day;save();return cal[day];
+ state.calendarDirty=false;state.calendarDay=day;save();return cal[day];
 }
 function makeDailyQueue(plan){
  const queue=plan.blocks.flatMap(b=>lessonQueue(b.ids));
@@ -140,12 +142,8 @@ function calendarPage(){
  }).join('')+'</div>';
 }
 Bora.pages.calendar=calendarPage;
-Bora.refreshToday=()=>{
- const day=localDay(),p=state.calendar?.[day];
- if(!p||p.status!=='planned')return;
- if(p.blocks.some(b=>b.ids.some(seenWord)))ensureCalendar(day,true);
- else p.reviews=selectedReviews(paceNames[p.intensity][3],day);
-};
+Bora.onKnowledgeChanged=()=>{state.calendarDirty=true;};
+Bora.refreshToday=()=>{state.calendarDirty=true;ensureCalendar();};
 Bora.complete=s=>{if(!s.date)Bora.refreshToday();if(s.date&&state.calendar?.[s.date]){const p=state.calendar[s.date];p.status='done';p.actual=localDay();p.cursor=p.total=s.queue.length;delete p.paused;}};
 Bora.paceControl=()=>{$('pace').innerHTML='<div class="card"><label class="field">Интенсивность<select class="input" id="intensity">'+Object.entries(paceNames).map(([k,[name,time]])=>'<option value="'+k+'" '+(k===settings().intensity?'selected':'')+'>'+name+' · '+time+'</option>').join('')+'</select></label></div>';};
 document.addEventListener('change',e=>{if(e.target.id==='intensity'){settings().intensity=e.target.value;ensureCalendar(localDay(),true);save();}});

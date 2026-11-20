@@ -7,7 +7,7 @@ function describeKey(key){
   const w=byId.get(kind==='form'?'v:'+id:id);
   if(!w)return null;
   const category=kind==='form'?'Спряжения':w.type==='verb'?'Глаголы':id.startsWith('f:')?(/фонк|фанк|танц|бит/i.test(w.topic)?'Фразы из фонка':'Сленг'):w.type==='phrase'?'Разговорные выражения':'Обычные слова';
-  return {w,kind,category,title:kind==='form'?id+' · '+people[+p]+' · '+tenses[+t][0]:(w.inf||w.word)+' · '+(t==='ru-pt'?'RU → PT':'PT → RU')};
+  return {w,kind,category,title:kind==='form'?id+' · '+people[+p]+' · '+tenses[+t][0]:(w.inf||w.word)+' · '+(kind==='cloze'?'пропуск':t==='ru-pt'?'RU → PT':'PT → RU')};
 }
 function wordTask(id,dir,mode='recall'){
   const w=byId.get(id),pt=w.inf||w.word,back=dir==='ru-pt';
@@ -24,6 +24,7 @@ function wordTask(id,dir,mode='recall'){
 }
 function taskForKey(key){
   const [kind,id,t,p]=key.split('|');
+  if(kind==='cloze')return clozeTask(byId.get(id));
   if(kind==='word')return wordTask(id,t);
   if(paradigms[id])return formTask(id,+t,+p,'recall');
   const w=byId.get('v:'+id);
@@ -51,11 +52,16 @@ function reviewSelection(candidates,n,focus){
   return selected;
 }
 function reviewCandidates(day=localDay()){
-  const entries=Object.entries(state.skills||{}).filter(([k,s])=>describeKey(k)&&s.checks).map(([key,s])=>({key,...rankSkill(s,day)}));
-  const keys=new Set(entries.map(x=>x.key));
-  // Old word records can schedule practice without inventing past test outcomes.
+  const measured=Object.entries(state.skills||{}).filter(([k,s])=>describeKey(k)&&s.checks);
+  const entries=measured.filter(([,s])=>s.due<=day).map(([key,s])=>({key,...rankSkill(s,day)}));
+  const keys=new Set(measured.map(([k])=>k));
+  // Use surviving legacy evidence only until this exact skill has a measured history.
+  for(const [key,r] of Object.entries(state.selfRatings||{})){
+    if(keys.has(key)||!r.unknown||!describeKey(key))continue;
+    entries.push({key,weak:true,score:2+r.unknown,overdue:0});keys.add(key);
+  }
   for(const [id,w] of Object.entries(state.words)){
-    const key=wordKey(id,'pt-ru');if(!byId.has(id)||keys.has(key))continue;
+    const key=wordKey(id,'pt-ru');if(!byId.has(id)||keys.has(key)||w.due>day)continue;
     const overdue=Math.max(0,Math.floor(dayNumber(day)-dayNumber(w.due)));
     entries.push({key,weak:w.wins===0||overdue>0,score:overdue*3+2,overdue});
   }
@@ -103,8 +109,8 @@ document.addEventListener('input',e=>{if(e.target.id==='focus-slider'){settings(
 document.addEventListener('change',e=>{if(e.target.id==='weak-filter'){weakFilter=e.target.value;weakPage();}});
 document.addEventListener('click',e=>{
  const d=e.target.closest('button')?.dataset;if(!d)return;
- if('errors' in d)beginPractice('Работа над ошибками',weakRows().slice(0,10).map(([k])=>taskForKey(k)));
- if('reviewNow' in d)beginPractice('Интервальное повторение',selectedReviews(10).map(taskForKey));
+ if('errors' in d)beginPractice('Работа над ошибками',weakRows().slice(0,10).map(([k])=>taskForKey(k)),'','review');
+ if('reviewNow' in d)beginPractice('Интервальное повторение',selectedReviews(10).map(taskForKey),'','review');
 });
 
 document.addEventListener('change',e=>{if(e.target.id==='answer-mode'){settings().answerMode=e.target.value;save();}});

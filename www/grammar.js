@@ -76,14 +76,14 @@ function grammarPage() {
     select('mode','Упражнение',Object.entries(modeNames),g.mode)+'<button class="btn wide" data-practice-grammar>Начать тренировку</button></div></div>';
 }
 function startGrammar() {
-  const g=grammarPick, learned=Object.keys(state.skills||{}).filter(k=>k.startsWith('form|')).map(k=>k.split('|'));
+  const g=grammarPick, learned=Object.keys(state.skills||{}).filter(k=>k.startsWith('form|')&&paradigms[k.split('|')[1]]).map(k=>k.split('|'));
   const queue=Array.from({length:7},(_,i)=>{
     const mode=g.mode==='mix'?['recall','choice','translate','fix'][i%4]:g.mode;
     const previous=g.mode==='mix'&&i%3===2?pickOne(learned.filter(f=>levelTenses[g.level].includes(+f[2])&&(!g.irregular||irregular.has(f[1])))):null;
     const verb=previous?.[1]||(g.irregular&&i>0?pickOne([...irregular]):g.verb);
     return formTask(verb,previous?+previous[2]:g.tense,i,mode,g.level==='B2');
   });
-  beginPractice('Глаголы и спряжения',queue);
+  beginPractice('Глаголы и спряжения',queue,'','grammar');
 }
 document.addEventListener('change', e=>{
   const k=e.target.dataset.grammar;
