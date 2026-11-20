@@ -14,19 +14,21 @@ function showPractice() {
   if(!s||!q){go('home');return;}
   screen='practice';nav();
   const mode=settings().answerMode;
+  const translation = q.solved || q.flipped || q.errors ? grammarTranslation(q) : '';
+  const translationLine = translation ? '<p class="answer-translation" lang="ru">'+esc(translation)+'</p>' : '';
   let feedback;
-  if(q.solved)feedback='<div class="feedback"><b>Верно!</b><p>'+esc(q.explanation||q.answers[0])+'</p><button class="btn wide" data-advance>Дальше →</button></div>';
+  if(q.solved)feedback='<div class="feedback"><b>Верно!</b><p>'+esc(q.explanation||q.answers[0])+'</p>'+translationLine+'<button class="btn wide" data-advance>Дальше →</button></div>';
   else if(q.mode==='intro')feedback='<button class="btn wide" data-advance>Продолжить</button>';
   else if(q.options)feedback=q.options.map((x,i)=>'<button class="option" data-practice-option="'+i+'">'+esc(x)+'</button>').join('');
   else if(mode==='card'){
-    feedback=q.flipped?'<div class="answer-side"><b>'+esc(q.answers[0])+'</b><p>'+esc(q.explanation||'')+'</p></div><div class="rating-row">'+
+    feedback=q.flipped?'<div class="answer-side"><b>'+esc(q.answers[0])+'</b><p>'+esc(q.explanation||'')+'</p>'+translationLine+'</div><div class="rating-row">'+
       [['wrong','Не вспомнил'],['partial','Почти вспомнил'],['right','Вспомнил']].map(([key,title])=>'<button class="rate '+key+'" data-grade="'+key+'">'+title+'</button>').join('')+'</div>':
       '<button class="btn wide" data-flip>Показать ответ</button>';
   }else feedback='<form id="practice-answer"><input id="practice-input" class="input" aria-label="Твой ответ" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Твой ответ"><button class="btn wide">Проверить</button></form>';
   if(q.mode!=='intro'&&!q.solved&&!q.flipped){
     feedback+='<button class="back" data-hint>Подсказка</button>';
     if(q.hinted)feedback+='<p class="note-box">'+esc(q.hint||q.answers[0])+'</p>';
-    if(q.errors)feedback+='<div class="feedback bad">Ответ: <b>'+esc(q.answers[0])+'</b>. <button class="back" data-skip>Пропустить</button></div>';
+    if(q.errors)feedback+='<div class="feedback bad">Ответ: <b>'+esc(q.answers[0])+'</b>.'+(translation ? '<p>'+esc(q.explanation)+'</p>'+translationLine : '')+' <button class="back" data-skip>Пропустить</button></div>';
   }
   $('view').innerHTML='<div class="content"><div class="session-top"><button class="back" data-go="home" aria-label="На главную">←</button><div class="bar"><i style="width:'+Math.round(100*s.index/s.queue.length)+'%"></i></div><span>'+ (s.index+1)+'/'+s.queue.length+'</span></div><p class="pack-name">'+esc(s.title)+'</p><div class="question"><span class="eyebrow">'+esc(q.label)+'</span><h2>'+esc(q.prompt)+'</h2>'+(q.context?'<p class="question-card">'+esc(q.context)+'</p>':'')+'</div>'+feedback+'</div>';
 }

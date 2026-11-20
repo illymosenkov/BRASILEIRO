@@ -1,13 +1,13 @@
 {
   "name": "bora-civic",
-  "version": "5.1.2",
+  "version": "5.1.3",
   "private": true,
   "description": "Brazilian Portuguese learning app",
   "scripts": {
     "android:add": "npx cap add android",
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
-    "test": "node check.cjs && node tests/memory.cjs && node tests/selection.cjs && node tests/dom.cjs && node tests/calendar.cjs && node tests/course.cjs && node tests/identity.cjs && node tests/model51.cjs && node tests/cards51.cjs && node tests/planner51.cjs && node tests/navigation51.cjs && node tests/return.cjs && node tests/multiverb.cjs"
+    "test": "node check.cjs && node tests/memory.cjs && node tests/selection.cjs && node tests/dom.cjs && node tests/calendar.cjs && node tests/course.cjs && node tests/identity.cjs && node tests/model51.cjs && node tests/cards51.cjs && node tests/planner51.cjs && node tests/navigation51.cjs && node tests/return.cjs && node tests/multiverb.cjs && node tests/grammar-translation.cjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",

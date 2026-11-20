@@ -22,7 +22,7 @@ function formTask(v,t,p,mode,advanced=false) {
   const subj = people[p].split('/')[0];
   const right = formOf(v,t,p);
   const prefix = ['Normalmente,','Ontem,','Naquela época,','No próximo ano,','Se pudesse,','Talvez','Amanhã,'][t];
-  const context = advanced ? ['Pelo que sei,','Segundo a Ana, ontem','Quando era criança,','Pelo que foi combinado, amanhã','Se tivesse a oportunidade,','É possível que','Pelo que combinamos, amanhã'][t] : prefix;
+  const context = advanced ? portugueseAdvancedPrefixes[t] : prefix;
   const frame = context+' '+subj+' ___ '+tail+'.';
   const distractors = shuffle([...new Set([...people.map((_,j)=>formOf(v,t,j)),...tenses.map((_,j)=>formOf(v,j,p))])].filter(x=>x!==right && normalizeRecall(x,true)!==normalizeRecall(right,true)));
   const base = {key:grammarKey(v,t,p), mode, label:v+' · '+people[p]+' · '+tenses[t][0], answers:[right], hint:byId.get('v:'+v).meaning, explanation:frame.replace('___',right), prompt:'Напиши форму для '+people[p]+'.'};
@@ -46,6 +46,77 @@ function formTask(v,t,p,mode,advanced=false) {
 }
 const grammarImperfect = Object.fromEntries(Object.keys(verbContexts).map((v,i)=>[v,[
 'я был местным','я был дома','у меня было время','я ходил на пляж','я делал это','я хотел кофе','я мог помочь','я говорил правду','я знал ответ','я видел море','я приходил сюда','я проводил урок','я накрывал на стол','я разговаривал с Аной','я ел рис','я пил воду','я рано ложился спать','я жил в Бразилии','мне нравилась музыка','мне нужна была помощь','я понимал вопрос','я знал город','я находил ключ','я думал об этом','я работал дома','я учил португальский','я покупал хлеб','я продавал книги','я приходил рано','я выходил из дома','я заходил в магазин','я возвращался домой','я оставался дома','я заходил в булочную','я оставлял сообщение','я садился на автобус','я брал с собой телефон','я приносил кофе','я просил счёт','я слушал музыку','я скучал','я встречал Ану','я вызывал такси','я ждал автобус','я начинал курс','я заканчивал курс','я открывал дверь','я закрывал окно','я писал сообщение','я читал книгу'][i]]));
+const russianSubjects = ['я','ты','он','мы','вы','они','мы'];
+const russianPrefixes = ['Обычно','Вчера','В то время','В следующем году','Если бы была возможность, то','Возможно,','Завтра'];
+const russianAdvancedPrefixes = ['Насколько я знаю,','По словам Аны, вчера','В детстве','По договорённости завтра','Если бы была возможность, то','Возможно,','Как мы договорились, завтра'];
+const portugueseAdvancedPrefixes = ['Pelo que sei,','Segundo a Ana, ontem','Quando era criança,','Pelo que foi combinado, amanhã','Se tivesse a oportunidade,','É possível que','Pelo que combinamos, amanhã'];
+function russianPresentSentence(verb, person) {
+  const [, present] = verbContexts[verb];
+  if (person === 0) return present;
+  const subject = russianSubjects[person];
+  const forms = russianPresent[verb];
+  const form = forms[(person === 6 ? 3 : person) - 1];
+  const tail = forms[5] ? ' ' + forms[5] : '';
+  if (verb === 'ter') return 'у ' + ['','тебя','него','нас','вас','них','нас'][person] + ' ' + form;
+  if (verb === 'gostar' || verb === 'precisar') return ['','тебе','ему','нам','вам','им','нам'][person] + ' ' + form;
+  return subject + ' ' + form + tail;
+}
+function russianPastPhrase(phrase, plural) {
+  if (!plural) return phrase;
+  const [verb, ...rest] = phrase.split(' ');
+  const exceptions = {'смог':'смогли','пришёл':'пришли','сходил':'сходили','лёг':'легли','вышел':'вышли','принёс':'принесли','сел':'сели'};
+  const form = exceptions[verb] || verb.replace(/л(ся)?$/, (_, reflexive) => reflexive ? 'лись' : 'ли');
+  return [form, ...rest].join(' ').replace(/местным$/, 'местными');
+}
+const russianFutureInfinitive = {
+  ir:'ходить на пляж',fazer:'делать это',vir:'приходить сюда',dar:'проводить урок',
+  pôr:'накрывать на стол',falar:'разговаривать с Аной',comer:'есть рис',beber:'пить воду',
+  dormir:'рано ложиться спать',gostar:'любить музыку',entender:'понимать вопрос',
+  conhecer:'знать город',achar:'находить ключ',pensar:'думать об этом',trabalhar:'работать дома',
+  estudar:'учить португальский',comprar:'покупать хлеб',vender:'продавать книги',chegar:'приходить рано',
+  sair:'выходить из дома',entrar:'заходить в магазин',voltar:'возвращаться домой',ficar:'оставаться дома',
+  passar:'заходить в булочную',deixar:'оставлять сообщение',pegar:'садиться на автобус',
+  levar:'брать с собой телефон',trazer:'приносить кофе',pedir:'просить счёт',ouvir:'слушать музыку',
+  sentir:'скучать',encontrar:'встречать Ану',chamar:'вызывать такси',esperar:'ждать автобус',
+  começar:'начинать курс',acabar:'заканчивать курс',abrir:'открывать дверь',fechar:'закрывать окно',
+  escrever:'писать сообщение',ler:'читать книгу',dizer:'говорить правду'
+};
+function grammarTranslation(task) {
+  const [,verb,tense,person] = task.key.split('|');
+  if (!task.key.startsWith('form|') || !Object.hasOwn(verbContexts, verb) || task.mode === 'cloze') return '';
+  const t = Number(tense), p = Number(person);
+  const [, , past, infinitive] = verbContexts[verb];
+  const subject = russianSubjects[p];
+  const plural = p >= 3;
+  const imperfect = grammarImperfect[verb];
+  const imperfectSentence = verb === 'gostar'
+    ? ['мне','тебе','ему','нам','вам','им','нам'][p] + ' нравилась музыка'
+    : verb === 'precisar'
+    ? ['мне','тебе','ему','нам','вам','им','нам'][p] + ' нужна была помощь'
+    : verb === 'ter'
+    ? 'у ' + ['меня','тебя','него','нас','вас','них','нас'][p] + ' было время'
+    : subject + ' ' + russianPastPhrase(imperfect.slice(2), plural);
+  const future = ['буду','будешь','будет','будем','будете','будут','будем'][p];
+  const plans = ['собираюсь','собираешься','собирается','собираемся','собираетесь','собираются','собираемся'][p];
+  const futureSentence = verb === 'poder'
+    ? subject + ' ' + ['смогу','сможешь','сможет','сможем','сможете','смогут','сможем'][p] + ' помочь'
+    : subject + ' ' + future + ' ' + (verb === 'ser' && plural ? 'быть местными' : russianFutureInfinitive[verb] || infinitive);
+  if (task.mode === 'translate') {
+    if (t === 3) return cap(futureSentence) + '.';
+    return task.prompt;
+  }
+  const sentence = [
+    russianPresentSentence(verb,p),
+    subject + ' ' + russianPastPhrase(past,plural),
+    imperfectSentence,
+    futureSentence,
+    subject + ' бы ' + russianPastPhrase(past,plural),
+    russianPresentSentence(verb,p),
+    subject + ' ' + plans + ' ' + infinitive
+  ][t];
+  const advanced = task.explanation?.startsWith(portugueseAdvancedPrefixes[t] + ' ');
+  return (advanced ? russianAdvancedPrefixes : russianPrefixes)[t] + ' ' + sentence + '.';
+}
 function pronunciationClue(v,t,p){
   const form=formOf(v,t,p),w=byId.get('v:'+v);
   if(t===0&&p===0)return 'эу '+w.euPron;
