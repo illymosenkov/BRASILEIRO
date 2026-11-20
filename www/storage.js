@@ -17,7 +17,12 @@ function checkedState(input){
    ['hint','context','explanation','trial'].every(k=>q[k]===undefined||str(q[k]))&&
    ['retry','solved','skipped','hinted','flipped','loggedActivity'].every(k=>q[k]===undefined||typeof q[k]==='boolean')&&
    (q.rating===undefined||['right','partial','wrong'].includes(q.rating))&&(q.errors===undefined||num(q.errors));
- const run=s=>obj(s)&&str(s.id)&&str(s.title)&&optDate(s.date)&&typeof s.finished==='boolean'&&Array.isArray(s.queue)&&s.queue.length>0&&
+ const returnContext=c=>c===undefined||(obj(c)&&['home','calendar','topic','learn','grammar','reviews','weak'].includes(c.route)&&
+   ['topic','mode','query','filter'].every(k=>c[k]===undefined||str(c[k]))&&
+   (c.week===undefined||Number.isSafeInteger(c.week))&&
+   (c.grammar===undefined||obj(c.grammar)&&Object.keys(verbContexts).includes(c.grammar.verb)&&Object.hasOwn(levelTenses,c.grammar.level)&&
+    Object.hasOwn(modeNames,c.grammar.mode)&&typeof c.grammar.irregular==='boolean'&&num(c.grammar.tense)&&c.grammar.tense<=6));
+ const run=s=>obj(s)&&returnContext(s.returnTo)&&str(s.id)&&str(s.title)&&optDate(s.date)&&typeof s.finished==='boolean'&&Array.isArray(s.queue)&&s.queue.length>0&&
    s.queue.every(task)&&num(s.index)&&(s.finished?s.index===s.queue.length:s.index<s.queue.length)&&(!s.credited||Array.isArray(s.credited)&&s.credited.every(id=>byId.has(id)));
  valid(obj(input)&&[3,5,6].includes(input.version)&&num(input.xp)&&num(input.streak)&&optDate(input.lastDay)&&
    (input.sound===undefined||typeof input.sound==='boolean'));

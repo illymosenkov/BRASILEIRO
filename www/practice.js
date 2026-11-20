@@ -2,9 +2,10 @@ const Bora = {pages:{grammar:grammarPage}};
 const newId = () => globalThis.crypto?.randomUUID?.() || Date.now().toString(36)+Math.random().toString(36).slice(2);
 function beginPractice(title,queue,date='',source='topic',lessonId='') {
   if(!queue.length){toast('Пока нет заданий для этой тренировки.');return;}
+  const returnTo=Bora.captureReturn?.(date,source)||{route:'home'};
   const old=state.practice;
   if(old?.date&&!old.finished&&state.calendar?.[old.date]?.status==='active')state.calendar[old.date].paused=old;
-  state.practice={id:newId(),title,queue,index:0,date,source:date?'calendar':source,lessonId,finished:false};
+  state.practice={id:newId(),title,queue,index:0,date,source:date?'calendar':source,lessonId,returnTo,finished:false};
   screen='practice';nav();save();showPractice();
 }
 function activeTask() {const s=state.practice;return s?.queue[s.index];}
@@ -72,7 +73,7 @@ function advancePractice(){
   if(s.date&&state.calendar?.[s.date]){state.calendar[s.date].cursor=s.index;state.calendar[s.date].total=s.queue.length;}
   if(s.index===s.queue.length){
     s.finished=true;if(s.lessonId)state.completedLevels[s.lessonId]=true;Bora.complete?.(s);save();screen='result';nav();
-    $('view').innerHTML='<div class="content result"><h1>Mandou bem!</h1><p>'+esc(s.title)+'</p><p>'+s.queue.filter(q=>q.mode!=='intro'&&!q.retry&&q.solved&&!q.errors&&!q.hinted&&q.rating!=='partial').length+' самостоятельно · '+s.queue.filter(q=>!q.retry&&(q.errors||q.hinted||q.rating==='partial')).length+' к закреплению</p>'+victoryScene()+'<button class="btn wide" data-go="home">На главную</button></div>';playVictory();return;
+    $('view').innerHTML='<div class="content result"><h1>Mandou bem!</h1><p>'+esc(s.title)+'</p><p>'+s.queue.filter(q=>q.mode!=='intro'&&!q.retry&&q.solved&&!q.errors&&!q.hinted&&q.rating!=='partial').length+' самостоятельно · '+s.queue.filter(q=>!q.retry&&(q.errors||q.hinted||q.rating==='partial')).length+' к закреплению</p>'+victoryScene()+'<button class="btn wide" data-return>'+esc(Bora.returnLabel?.(s)||'На главную')+'</button></div>';playVictory();return;
   }
   save();showPractice();window.scrollTo(0,0);
 }

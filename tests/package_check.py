@@ -36,10 +36,10 @@ with ZipFile(base) as old, ZipFile(release) as apk, release.open('rb') as raw:
                 if idx<len(ids) and ids[idx]==0x0101021B:code=struct.unpack_from('<I',manifest,attr+16)[0]
             break
         pos+=size
-    assert code==510
+    assert code==511
     for info in apk.infolist():
         if info.compress_type==0:
             raw.seek(info.header_offset+26)
             name,extra=struct.unpack('<HH',raw.read(4))
             assert (info.header_offset+30+name+extra)%4==0, info.filename
-print('APK: ZIP intact, assets match source, aligned stored resources, original native shell, backup DEX, app ID, versionCode 510 and 5.1 verified.')
+print('APK: ZIP intact, assets match source, aligned stored resources, original native shell, backup DEX, app ID, versionCode 511 and 5.1 verified.')

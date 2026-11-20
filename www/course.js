@@ -6,6 +6,27 @@ const shelves=[
 ];
 let selectedTopic='',catalogQuery='',topicMode='pt-ru';
 const getTopic=id=>groups.find(g=>g.id===id)||getLesson(id);
+const returnRoutes=['home','calendar','topic','learn','grammar','reviews','weak'];
+Bora.captureReturn=(date,source)=>{
+ const route=returnRoutes.includes(screen)?screen:date?'home':source==='grammar'?'grammar':source==='review'?'reviews':'learn';
+ return {route,topic:selectedTopic,mode:topicMode,query:catalogQuery,grammar:{...grammarPick},week:calendarWeek,filter:weakFilter};
+};
+Bora.returnLabel=s=>({
+ home:'К сегодняшнему плану',calendar:'Вернуться к календарю',topic:'Вернуться к теме',
+ learn:'Вернуться в каталог',grammar:'Вернуться к спряжениям',reviews:'Вернуться к повторениям',weak:'К слабым словам'
+})[s.returnTo?.route|| (s.date?'home':s.source==='grammar'?'grammar':s.source==='review'?'reviews':'learn')];
+function returnFromPractice(){
+ const s=state.practice;
+ const context=s?.returnTo||{route:s?.date?'home':s?.source==='grammar'?'grammar':s?.source==='review'?'reviews':'learn'};
+ if(context.topic&&getTopic(context.topic))selectedTopic=context.topic;
+ if(['pt-ru','ru-pt','guided','quiz','write'].includes(context.mode))topicMode=context.mode;
+ if(typeof context.query==='string')catalogQuery=context.query;
+ if(context.grammar)Object.assign(grammarPick,context.grammar);
+ if(Number.isSafeInteger(context.week))calendarWeek=context.week;
+ if(typeof context.filter==='string')weakFilter=context.filter;
+ go(context.route==='topic'&&!getTopic(selectedTopic)?'learn':context.route);
+}
+document.addEventListener('click',e=>{if(e.target.closest('[data-return]'))returnFromPractice();});
 function nav(){
  const owner={calendar:'home',topic:'learn',grammar:'learn',weak:'reviews'}[screen]||screen;
  $('nav').innerHTML=[['home','⌂','Сегодня'],['learn','▤','Учиться'],['reviews','↻','Повторить']].map(([id,icon,title])=>
