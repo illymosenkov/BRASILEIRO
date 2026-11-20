@@ -1,4 +1,4 @@
-const STORE='bora_civic_v5', PREVIOUS=STORE+'_previous', LEGACY='bora_civic_v3';
+const STORE='bora_civic_v51', PREVIOUS=STORE+'_previous', V50='bora_civic_v5', LEGACY='bora_civic_v3';
 let storageBlocked=false;
 function checkedState(input){
  const obj=v=>v!==null&&typeof v==='object'&&!Array.isArray(v),num=v=>Number.isSafeInteger(v)&&v>=0;
@@ -18,7 +18,7 @@ function checkedState(input){
    (q.errors===undefined||num(q.errors));
  const run=s=>obj(s)&&str(s.id)&&str(s.title)&&optDate(s.date)&&typeof s.finished==='boolean'&&Array.isArray(s.queue)&&s.queue.length>0&&
    s.queue.every(task)&&num(s.index)&&(s.finished?s.index===s.queue.length:s.index<s.queue.length)&&(!s.credited||Array.isArray(s.credited)&&s.credited.every(id=>byId.has(id)));
- valid(obj(input)&&[3,5].includes(input.version)&&num(input.xp)&&num(input.streak)&&optDate(input.lastDay)&&
+ valid(obj(input)&&[3,5,6].includes(input.version)&&num(input.xp)&&num(input.streak)&&optDate(input.lastDay)&&
    (input.sound===undefined||typeof input.sound==='boolean'));
  // Guard object map keys before using any imported records for dynamic lookup.
  const guard=x=>{if(x&&typeof x==='object')for(const [k,v] of Object.entries(x)){valid(!['__proto__','constructor','prototype'].includes(k));guard(v);}};guard(input);
@@ -27,7 +27,7 @@ function checkedState(input){
  if(input.version===3){
    const migrated={...emptyState(),...input,version:5,skills:{},preferences:defaults(),calendar:{},calendarDay:'',selfRatings:{},exposure:{},completedLevels:{}};
    for(const t of [...packs,...topics,...phraseTopics,...funkTopics])if(t.words.every(w=>input.words[w.id]?.wins>=2))migrated.completedLevels[t.id]=true;
-   return migrated;
+   return checkedState(migrated);
  }
  const s=input;
  valid(obj(s.preferences)&&num(s.preferences.focus)&&s.preferences.focus<=100&&s.preferences.focus%10===0&&Object.hasOwn(paceNames,s.preferences.intensity));
@@ -41,6 +41,16 @@ function checkedState(input){
  dict(s.selfRatings,(k,v)=>key(k)&&obj(v)&&num(v.known)&&num(v.unknown));
  dict(s.exposure,(id,d)=>byId.has(id)&&date(d));
  dict(s.completedLevels,(id,v)=>!!getLesson(id)&&v===true);
+ if(s.version===6){
+   valid(['card','typed'].includes(s.preferences.answerMode));
+   for(const skill of Object.values(s.skills)){
+     valid(num(skill.partials||0)&&skill.history.filter(h=>!h.retry&&h.firstOutcome==='partial').length===(skill.partials||0));
+     for(const h of skill.history){
+       if(h.firstOutcome!==undefined)valid(['right','partial','wrong'].includes(h.firstOutcome));
+       if(h.method!==undefined)valid(['card','typed','choice'].includes(h.method));
+     }
+   }
+ }
  valid(optDate(s.calendarDay));
  dict(s.calendar,(d,p)=>date(d)&&obj(p)&&p.day===d&&Object.hasOwn(statusNames,p.status)&&Object.hasOwn(paceNames,p.intensity)&&
     typeof p.optional==='boolean'&&num(p.total)&&num(p.cursor)&&p.cursor<=p.total&&optDate(p.actual)&&(p.status==='done'?!!p.actual:!p.actual)&&
@@ -49,20 +59,29 @@ function checkedState(input){
     Array.isArray(p.carried)&&p.carried.every(c=>obj(c)&&date(c.day)&&Array.isArray(c.ids)&&c.ids.every(id=>byId.has(id)))&&
     (!p.movedTo||date(p.movedTo))&&(!p.paused||run(p.paused)&&p.paused.date===d));
  valid(!s.practice||run(s.practice)&&(!s.practice.date||Object.hasOwn(s.calendar,s.practice.date)));
+ if(s.version===5)return {...s,version:6,preferences:{...s.preferences,answerMode:'card'}};
  return s;
 }
 function bootStorage(){
- const main=localStorage.getItem(STORE),previous=localStorage.getItem(PREVIOUS),old=localStorage.getItem(LEGACY);
- for(const raw of [main,previous,old]){
-   if(!raw)continue;
+ const candidates=[STORE,PREVIOUS,V50,V50+'_previous',LEGACY];
+ for(const key of candidates){
+   const raw=localStorage.getItem(key);
+   if(raw===null)continue;
    try{
      const parsed=checkedState(JSON.parse(raw));
-     if(raw!==main&&main!==null)localStorage.setItem(STORE+'_damaged',main);
-     if(raw!==main)localStorage.setItem(STORE,JSON.stringify(parsed));
+     if(key!==STORE){
+       const damaged=localStorage.getItem(STORE);
+       if(damaged!==null)localStorage.setItem(STORE+'_damaged',damaged);
+       localStorage.setItem(STORE,JSON.stringify(parsed));
+     }
      return parsed;
-   }catch{}
+   }catch{
+     // A damaged current snapshot may only fall back to its own previous version.
+     if(key===STORE&&localStorage.getItem(PREVIOUS)!==null)continue;
+     if(key===V50&&localStorage.getItem(V50+'_previous')!==null)continue;
+     storageBlocked=true;break;
+   }
  }
- if(main!==null||previous!==null||old!==null)storageBlocked=true;
  return checkedState(emptyState());
 }
 function persist(){

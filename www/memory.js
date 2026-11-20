@@ -9,40 +9,51 @@ const wordKey=(id,dir)=>'word|'+id+'|'+dir;
 function emptySkill(){
   return {checks:0,firstRight:0,firstWrong:0,errors:0,attempts:0,hints:0,streak:0,ease:2.5,interval:0,confidence:0,difficulty:0,status:'neutral',last:'',due:'',history:[]};
 }
-function recordEvent(model,q,kind,sessionId,day=localDay()){
-  model.skills??={};
-  const s=model.skills[q.key]??=emptySkill();
+function recordEvent(model,q,kind,sessionId,day=localDay(),method='typed',source='practice'){
+  if(!['hint','right','partial','wrong'].includes(kind))throw Error('Unknown learning result');
+  const skills=model.skills??={};
+  const s=skills[q.key]??=emptySkill();
   q.trial??=newId();
   let event=s.history.at(-1);
-  if(!event||event.id!==q.trial){
-    event=s.history.findLast?.(x=>x.id===q.trial)||s.history.find(x=>x.id===q.trial);
-    if(!event){event={id:q.trial,session:sessionId,date:day,mode:q.mode,attempts:0,errors:0,hints:0,first:null,correct:false,retry:!!q.retry};s.history.push(event);}
+  if(event?.id!==q.trial)event=s.history.find(h=>h.id===q.trial);
+  if(!event){
+    event={id:q.trial,session:sessionId,date:day,mode:q.mode,method,source,attempts:0,errors:0,hints:0,first:null,correct:false,retry:!!q.retry};
+    s.history.push(event);
   }
-  if(kind==='hint'){if(!event.hints){event.hints=1;s.hints++;}return;}
-  if(event.correct)return;
-  const first=event.attempts===0,ok=kind==='right';
-  event.attempts++;s.attempts++;
-  if(!ok){event.errors++;s.errors++;}
-  if(ok)event.correct=true;
+  if(event.correct||event.closed)return false;
+  if(kind==='hint'){if(!event.hints){event.hints=1;s.hints++;}return true;}
+  const first=event.attempts===0;
+  const outcome=kind==='right'&&event.hints?'partial':kind;
+  event.attempts++;s.attempts++;event.lastOutcome=outcome;
+  if(kind==='wrong'){event.errors++;s.errors++;}
+  else event.correct=kind==='right';
+  if(method==='card'||kind==='partial')event.closed=true;
+  if(first)event.firstOutcome=outcome;
   if(first&&!event.retry){
-    s.checks++;event.first=ok&&!event.hints;
+    s.checks++;event.first=outcome==='right';
     if(event.first)s.firstRight++;
-    else if(!ok)s.firstWrong++;
-    const prev=s.last;
-    if(!event.first){
-      s.ease=Math.max(1.3,s.ease-(ok?.12:.22));s.streak=0;s.interval=0;s.due=day;
-    }else if(!prev || (!s.streak || (prev!==day && day>=s.due))){
-      s.streak++;s.interval=s.streak===1?1:s.streak===2?3:
-        Math.min(60,Math.max(s.interval+1,Math.round([0,1,3,7,14,30][s.streak] * s.ease/2.5 || s.interval*s.ease)));
-      s.ease=Math.min(2.65,s.ease+.035);s.due=shiftDay(day,s.interval);
+    if(outcome==='wrong')s.firstWrong++;
+    if(outcome==='partial')s.partials=(s.partials||0)+1;
+    if(outcome==='right'){
+      if(!s.streak||(s.last!==day&&day>=s.due)){
+        s.streak++;
+        const base=[0,1,3,7,14,30][s.streak];
+        s.interval=s.streak<3?base:Math.min(60,Math.max(s.interval+1,Math.round(base?base*s.ease/2.5:s.interval*s.ease)));
+        s.ease=Math.min(2.65,s.ease+.035);s.due=shiftDay(day,s.interval);
+      }
+    }else{
+      s.ease=Math.max(1.3,s.ease-(outcome==='partial'?.12:.22));
+      s.interval=outcome==='partial'?Math.min(3,Math.floor(s.interval/3)):0;
+      s.streak=0;s.due=shiftDay(day,s.interval);
     }
     s.last=day;
   }
   const recent=s.history.filter(h=>!h.retry&&h.attempts).slice(-8);
-  const rate=recent.filter(h=>h.first).length/Math.max(1,recent.length);
+  const rate=recent.reduce((n,h)=>n+(h.first?1:h.firstOutcome==='partial'?.4:0),0)/Math.max(1,recent.length);
   s.confidence=Math.round(100*rate*Math.min(1,s.streak/3));
   s.difficulty=Math.round(100*(1-rate));
-  s.status=!s.checks?'neutral':s.streak>=3&&s.confidence>=70?'green':!s.streak&&s.firstWrong?'red':'yellow';
+  s.status=!s.checks?'neutral':s.streak>=3&&s.confidence>=70?'green':!s.streak&&event.firstOutcome==='wrong'?'red':s.status==='red'&&event.retry?'red':'yellow';
+  return true;
 }
 Bora.attempt=(q,ok,id)=>recordEvent(state,q,ok?'right':'wrong',id);
 Bora.noteHint=(q,id)=>recordEvent(state,q,'hint',id);
