@@ -64,15 +64,6 @@ function lessonQueue(ids){
  }
  return queue;
 }
-function blocksPage(){
- $('view').innerHTML='<div class="content"><h2>Небольшие темы</h2>'+[...foundation,...verbGroups,...topics,...phraseTopics,...funkTopics].map(g=>'<details class="card"><summary>'+esc(g.title)+'</summary>'+blockButtons(blocks.filter(b=>b.parent===g.id))+'</details>').join('')+'</div>';
-}
-function blockButtons(list){return list.map(b=>'<button class="chunk" data-block="'+b.id+'"><span><b>'+esc(b.title)+'</b><small>'+b.ids.length+' слов · знакомо '+b.ids.filter(seenWord).length+'</small></span><span>→</span></button>').join('');}
-Bora.pages.blocks=blocksPage;
-document.addEventListener('click',e=>{
- const id=e.target.closest('[data-block]')?.dataset.block;if(!id)return;
- const b=blocks.find(x=>x.id===id);if(b)beginPractice(b.title,lessonQueue(b.ids));
-});
 const memoryAdvance=Bora.beforeAdvance;
 Bora.beforeAdvance=(s,q)=>{
  if(q.mode==='intro'){state.exposure??={};state.exposure[q.key.split('|')[1]]??=localDay();Bora.onKnowledgeChanged(q.key);}

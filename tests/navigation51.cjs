@@ -1,0 +1,11 @@
+const {app,assert}=require('./dom.cjs');
+const a=app(),{find,click,run,w}=a;const names=()=>[...w.document.querySelectorAll('#nav button')].map(x=>x.dataset.go);
+assert.deepEqual(names(),['home','learn','reviews']);assert.equal(w.document.querySelectorAll('#view .btn').length,1);
+click('#nav [data-go=learn]');click('[data-topic=g0]');
+find('#topic-scope').value='v0';find('#topic-scope').dispatchEvent(new w.Event('change',{bubbles:true}));
+assert.equal(w.document.querySelectorAll('[data-unit]').length,2);assert.equal(w.document.querySelectorAll('.word-actions').length,10);
+click('[data-unit]');assert.ok(run('state.practice.queue.length<=7'));click('[data-flip]');click('[data-grade=wrong]');
+click('[data-go=home]');click('#nav [data-go=reviews]');click('[data-review-now]');assert.ok(find('[data-flip]'));
+run("go('learn')");find('#catalog-search').value='fazer';find('#catalog-search').dispatchEvent(new w.Event('input',{bubbles:true}));click('[data-verb=fazer]');assert.ok(find('[data-practice-grammar]'));
+click('.top [data-go=profile]');assert.ok(find('[data-export]'));click('[data-go=preferences]');assert.ok(find('#answer-mode'));
+a.dom.window.close();console.log('Three navigation roots, one primary today action, old ten-word deck as two blocks, grammar, reviews and profile reachable.');

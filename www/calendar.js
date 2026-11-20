@@ -128,7 +128,7 @@ function startDay(){
 function dailyCard(p){
  const fresh=p.blocks.flatMap(b=>b.ids).length;
  const text=p.blocks.map(b=>esc(b.title)).join(' + ')||(p.optional?'Воскресенье · отдых или короткое повторение':'Закрепляем знакомое');
- return '<div class="card daily"><div class="eyebrow">'+esc(dayLabel(p.day))+'</div><h2>'+text+'</h2><p>'+paceNames[p.intensity][1]+' · новых слов '+fresh+' · повторений '+p.reviews.length+(p.grammar.length?' · форм '+p.grammar.length:'')+'</p><div class="bar"><i style="width:'+(p.total?100*p.cursor/p.total:0)+'%"></i></div><p>'+statusNames[p.status]+(p.total?' · '+p.cursor+' из '+p.total:'')+'</p><button class="btn wide" data-day>'+({done:'Посмотреть неделю',active:'Продолжить обучение'}[p.status]||(p.optional&&!p.reviews.length?'Выбрать необязательную тему':'Начать обучение'))+'</button></div>';
+ return '<div class="card daily"><div class="eyebrow">'+esc(dayLabel(p.day))+'</div><h2>'+text+'</h2><p>'+paceNames[p.intensity][1]+' · новых слов '+fresh+' · повторений '+p.reviews.length+(p.grammar.length?' · форм '+p.grammar.length:'')+'</p><div class="bar"><i style="width:'+(p.total?100*p.cursor/p.total:0)+'%"></i></div><p>'+statusNames[p.status]+(p.total?' · '+p.cursor+' из '+p.total:'')+'</p><button class="btn wide" data-day>'+({done:'Посмотреть неделю',active:'Продолжить'}[p.status]||(p.optional&&!p.reviews.length?'Выбрать необязательную тему':'Начать'))+'</button></div>';
 }
 function calendarPage(){
  ensureCalendar();const first=shiftDay(mondayOf(localDay()),7*calendarWeek),days=Array.from({length:7},(_,i)=>shiftDay(first,i));

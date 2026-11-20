@@ -41,6 +41,7 @@ function checkedState(input){
  });
  dict(s.selfRatings,(k,v)=>key(k)&&obj(v)&&num(v.known)&&num(v.unknown));
  dict(s.exposure,(id,d)=>byId.has(id)&&date(d));
+ if(s.completedBlocks!==undefined)dict(s.completedBlocks,(id,v)=>/^[a-z]+[0-9]+\.[0-9]+$/.test(id)&&v===true);
  dict(s.completedLevels,(id,v)=>!!getLesson(id)&&v===true);
  if(s.version===6){
    valid(['card','typed'].includes(s.preferences.answerMode));
@@ -99,5 +100,5 @@ function restoreChecked(json){
    if(prior){localStorage.setItem(PREVIOUS,prior);}
    localStorage.setItem(STORE,JSON.stringify(incoming));
  }catch{toast('Недостаточно места для безопасного восстановления.');return false;}
- state=incoming;storageBlocked=false;session=null;go('profile');toast('Прогресс восстановлен.');return true;
+ state=incoming;storageBlocked=false;go('profile');toast('Прогресс восстановлен.');return true;
 }

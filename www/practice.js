@@ -72,7 +72,7 @@ function advancePractice(){
   if(s.date&&state.calendar?.[s.date]){state.calendar[s.date].cursor=s.index;state.calendar[s.date].total=s.queue.length;}
   if(s.index===s.queue.length){
     s.finished=true;if(s.lessonId)state.completedLevels[s.lessonId]=true;Bora.complete?.(s);save();screen='result';nav();
-    $('view').innerHTML='<div class="content result"><h1>Mandou bem!</h1><p>'+esc(s.title)+' · тренировка завершена.</p>'+victoryScene()+'<button class="btn wide" data-go="home">На главную</button></div>';playVictory();return;
+    $('view').innerHTML='<div class="content result"><h1>Mandou bem!</h1><p>'+esc(s.title)+'</p><p>'+s.queue.filter(q=>q.mode!=='intro'&&!q.retry&&q.solved&&!q.errors&&!q.hinted&&q.rating!=='partial').length+' самостоятельно · '+s.queue.filter(q=>!q.retry&&(q.errors||q.hinted||q.rating==='partial')).length+' к закреплению</p>'+victoryScene()+'<button class="btn wide" data-go="home">На главную</button></div>';playVictory();return;
   }
   save();showPractice();window.scrollTo(0,0);
 }
