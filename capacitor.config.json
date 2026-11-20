@@ -1,6 +1,6 @@
 {
   "appId": "br.bora.civic43",
-  "appName": "Bora 5.0",
+  "appName": "Bora 5.1",
   "webDir": "www",
   "server": {
     "androidScheme": "https"

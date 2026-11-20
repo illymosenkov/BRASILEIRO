@@ -21,12 +21,13 @@ assert.equal(run('new Set(state.practice.queue.map(q=>q.mode)).size'),4);
 run("beginPractice('Проверка',lessonQueue(blocks.find(b=>b.parent==='base0').ids));while(activeTask().mode==='intro')advancePractice();window.targetKey=activeTask().key;gradePractice('???');gradePractice(activeTask().answers[0]);advancePractice()");
 assert.ok(run("state.practice.queue.slice(state.practice.index+5).some(q=>q.retry&&q.key===targetKey)"));
 run("go('preferences')");find('#focus-slider').value='80';find('#focus-slider').dispatchEvent(new w.Event('input',{bubbles:true}));
-assert.equal(run("JSON.parse(localStorage.getItem('bora_civic_v5')).preferences.focus"),80);
+assert.equal(run("JSON.parse(localStorage.getItem('bora_civic_v51')).preferences.focus"),80);
 for(const page of ['home','learn','phrases','funk','dictionary','profile','blocks','grammar','reviews','weak','preferences','calendar']){
  run("go('"+page+"')");assert.ok(find('#view').textContent.trim().length>20,page);
 }
-run("start('f0','ru-pt');reveal();submitAnswer(true)");assert.ok(run('Object.values(state.selfRatings).some(r=>r.known===1)'));
-run("start('n0','pt-ru');window.legacyKey=wordKey(session.queue[0].w.id,'pt-ru');document.querySelector('#typed').value='неправильно';writeAnswer();submitAnswer(true)");
+run("start('f0','ru-pt');window.cardKey=activeTask().key");click('[data-flip]');click('[data-grade=right]');
+assert.equal(run('state.skills[cardKey].firstRight'),1);
+run("settings().answerMode='typed';start('n0','pt-ru');window.legacyKey=activeTask().key;gradePractice('неправильно');gradePractice(activeTask().answers[0])");
 assert.equal(run('state.skills[legacyKey].firstWrong'),1);assert.equal(run('state.skills[legacyKey].firstRight'),0);
 assert.deepEqual(a.errors,[]);a.dom.window.close();
-console.log('9,800 generated mode/person/tense cases; irregular and mixed practice, delayed repair, settings, routes and separate self-rating OK.');
+console.log('9,800 generated exercises, irregular and mixed practice, delayed repair, settings, routes and shared grading OK.');

@@ -104,7 +104,7 @@ async function transferProgress(operation) {
 }
 
 function exportProgress() {
-  const json = JSON.stringify({app: 'bora-civic', state});
+  const json = backupEnvelope();
   const native = backupPlugin();
   if (native) {
     return transferProgress(async () => {

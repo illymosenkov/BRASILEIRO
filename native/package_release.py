@@ -1,4 +1,4 @@
-"""Rebuild Bora 5.0 from the original signed 4.3 Capacitor shell and updated web sources."""
+"""Rebuild Bora 5.1 from the original signed 4.3 Capacitor shell and updated web sources."""
 import argparse
 import hashlib
 import json
@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE_SHA = '776214417489f44e66e557e95392bb72e16937529c40400f4c1adfa17607aaf4'
 
 def manifest_version(data):
-    data = bytearray(replace_once(data, '4.3\0', '5.0\0', 'utf-16le'))
+    data = bytearray(replace_once(data, '4.3\0', '5.1\0', 'utf-16le'))
     offset = 8
     version_attribute = None
     while offset < len(data):
@@ -26,7 +26,7 @@ def manifest_version(data):
                 attr = node + start + i*stride
                 if struct.unpack_from('<I', data, attr+4)[0] == version_attribute:
                     assert struct.unpack_from('<I', data, attr+16)[0] == 404
-                    struct.pack_into('<I', data, attr+16, 500)
+                    struct.pack_into('<I', data, attr+16, 510)
                     return data
         offset += size
     raise ValueError('Version attribute missing')
@@ -38,7 +38,7 @@ def package(base, output, plugin):
         assets = {'assets/public/'+p.name:p.read_bytes() for p in (ROOT/'www').iterdir() if p.is_file()}
         assets['AndroidManifest.xml'] = manifest_version(source.read('AndroidManifest.xml'))
         assets['assets/capacitor.config.json'] = (ROOT/'capacitor.config.json').read_bytes()
-        assets['resources.arsc'] = replace_once(source.read('resources.arsc'),'Bora 4.3','Bora 5.0','utf-8')
+        assets['resources.arsc'] = replace_once(source.read('resources.arsc'),'Bora 4.3','Bora 5.1','utf-8')
         assets['classes5.dex'] = plugin.read_bytes()
         for info in source.infolist():
             name = info.filename

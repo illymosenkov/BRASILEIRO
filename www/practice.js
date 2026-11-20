@@ -51,7 +51,7 @@ function answerTask(kind,method){
   if(kind==='wrong')q.errors=(q.errors||0)+1;
   const complete=kind==='right'||method==='card';
   if(complete){
-    q.solved=true;q.rating=kind==='right'&&q.hinted?'partial':kind;
+    q.solved=true;q.rating=kind==='right'&&(q.hinted||q.errors)?'partial':kind;
     if(!q.retry)state.xp+=q.rating==='right'?5:q.rating==='partial'?2:0;
   }
   Bora.onKnowledgeChanged?.(q.key);

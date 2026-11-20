@@ -14,14 +14,14 @@ with ZipFile(base) as old, ZipFile(release) as apk, release.open('rb') as raw:
     for p in (root/'www').iterdir():
         assert apk.read('assets/public/'+p.name) == p.read_bytes(), p.name
     cfg=json.loads(apk.read('assets/capacitor.config.json'))
-    assert cfg['appId']=='br.bora.civic43' and cfg['appName']=='Bora 5.0'
+    assert cfg['appId']=='br.bora.civic43' and cfg['appName']=='Bora 5.1'
     assert cfg['server']==json.loads(old.read('assets/capacitor.config.json'))['server']
     assert json.loads(apk.read('assets/capacitor.plugins.json'))==[{'classpath':'br.bora.civic41.BoraBackupPlugin'}]
     for name in ['classes.dex','classes2.dex','classes3.dex','classes4.dex']:
         assert apk.read(name)==old.read(name)
     assert b'BoraBackupPlugin' in apk.read('classes5.dex')
     manifest=apk.read('AndroidManifest.xml')
-    assert '5.0\0'.encode('utf-16le') in manifest and 'br.bora.civic43\0'.encode('utf-16le') in manifest
+    assert '5.1\0'.encode('utf-16le') in manifest and 'br.bora.civic43\0'.encode('utf-16le') in manifest
     pos=8
     code=None
     while pos<len(manifest):
@@ -36,10 +36,10 @@ with ZipFile(base) as old, ZipFile(release) as apk, release.open('rb') as raw:
                 if idx<len(ids) and ids[idx]==0x0101021B:code=struct.unpack_from('<I',manifest,attr+16)[0]
             break
         pos+=size
-    assert code==500
+    assert code==510
     for info in apk.infolist():
         if info.compress_type==0:
             raw.seek(info.header_offset+26)
             name,extra=struct.unpack('<HH',raw.read(4))
             assert (info.header_offset+30+name+extra)%4==0, info.filename
-print('APK: ZIP intact, assets match source, aligned stored resources, original native shell, backup DEX, app ID, versionCode 500 and 5.0 verified.')
+print('APK: ZIP intact, assets match source, aligned stored resources, original native shell, backup DEX, app ID, versionCode 510 and 5.1 verified.')

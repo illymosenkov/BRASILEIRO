@@ -1,8 +1,8 @@
-name: Bora 5 Android verification
+name: Bora 5.1 Android verification
 on:
   workflow_dispatch:
   push:
-    branches: [bora/personal-plan-v5, main, master]
+    branches: [bora/unified-learning-v5.1, main, master]
     paths:
       - 'www/**'
       - 'native/**'
@@ -29,21 +29,26 @@ jobs:
           distribution: temurin
           java-version: 21
       - run: npm install && npm test
-      - name: Build two QA packages with the same temporary debug certificate
+      - name: Build three QA packages with the same temporary debug certificate
         run: |
           npx cap add android
           python3 tests/prepare_android_qa.py
           mkdir -p /tmp/bora-qa
-          cp -r www /tmp/bora-qa/v5-www
+          cp -r www /tmp/bora-qa/v51-www
           git archive c490c58c96a26a88e1711c5acdd35cabc8bea73a www | tar -x
           npx cap copy android
           cd android && ./gradlew assembleDebug && cd ..
           cp android/app/build/outputs/apk/debug/app-debug.apk /tmp/bora-qa/v43.apk
-          cp -a /tmp/bora-qa/v5-www/. www/
+          git archive 4f6dfce8a732c264dd3e96b55a6c84fc078d8f29 www | tar -x
           sed -i 's/versionCode 404/versionCode 500/;s/versionName "4.3"/versionName "5.0"/' android/app/build.gradle
           npx cap copy android
           cd android && ./gradlew assembleDebug && cd ..
           cp android/app/build/outputs/apk/debug/app-debug.apk /tmp/bora-qa/v50.apk
+          cp -a /tmp/bora-qa/v51-www/. www/
+          sed -i 's/versionCode 500/versionCode 510/;s/versionName "5.0"/versionName "5.1"/' android/app/build.gradle
+          npx cap copy android
+          cd android && ./gradlew assembleDebug && cd ..
+          cp android/app/build/outputs/apk/debug/app-debug.apk /tmp/bora-qa/v51.apk
       - name: Enable Android emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

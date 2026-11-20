@@ -1,6 +1,6 @@
-# BORA Civic 5.0 для Android
+# BORA Civic 5.1 для Android
 
-Распространяемый APK использует ту же оболочку Capacitor, адрес WebView и applicationId br.bora.civic43, что и оригинальный выпуск 4.3. VersionCode повышен с 404 до 500. В полном архиве исходников файл base/Bora-Civic-v4.3.apk служит проверяемой зависимостью сборки.
+Распространяемый APK использует ту же оболочку Capacitor, адрес WebView и applicationId br.bora.civic43, что и оригинальный выпуск 4.3. VersionCode повышен с 404 до 510. В полном архиве исходников файл base/Bora-Civic-v4.3.apk служит проверяемой зависимостью сборки.
 
 ## Повторить сборку выпуска
 
@@ -9,12 +9,12 @@
 ```bash
 bash native/android/build_backup_dex.sh /path/to/android.jar /path/to/d8 backup.dex
 python3 native/package_release.py base/Bora-Civic-v4.3.apk Bora-unsigned.apk backup.dex
-apksigner sign --ks /private/path/bora-release.p12 --out Bora-Civic-v5.0.apk Bora-unsigned.apk
-apksigner verify --verbose --print-certs Bora-Civic-v5.0.apk
-python3 tests/package_check.py base/Bora-Civic-v4.3.apk Bora-Civic-v5.0.apk
+apksigner sign --ks /private/path/bora-release.p12 --out Bora-Civic-v5.1.apk Bora-unsigned.apk
+apksigner verify --verbose --print-certs Bora-Civic-v5.1.apk
+python3 tests/package_check.py base/Bora-Civic-v4.3.apk Bora-Civic-v5.1.apk
 ```
 
-SHA-256 сертификата 4.3 и 5.0 — `579a46bdefbdad54b03b801ec469c14c0d160c230a5d93c510cb8b33ea43b2fd`. Закрытый ключ подписи хранится отдельно от публичных исходников. Следующая сессия может работать и тестировать приложение из ветки или ZIP. Для очередного подписанного обновления потребуется доступ к тому же ключу.
+SHA-256 сертификата 4.3 и 5.1 — `579a46bdefbdad54b03b801ec469c14c0d160c230a5d93c510cb8b33ea43b2fd`. Закрытый ключ подписи хранится отдельно от публичных исходников. Следующая сессия может работать и тестировать приложение из ветки или ZIP. Для очередного подписанного обновления потребуется доступ к тому же ключу.
 
 ## Проверки
 

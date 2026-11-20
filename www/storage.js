@@ -15,8 +15,8 @@ function checkedState(input){
    (q.mode==='intro'||(Array.isArray(q.answers)&&q.answers.length>0&&q.answers.every(str)))&&
    (!q.options||Array.isArray(q.options)&&q.options.every(str))&&
    ['hint','context','explanation','trial'].every(k=>q[k]===undefined||str(q[k]))&&
-   ['retry','solved','skipped','hinted'].every(k=>q[k]===undefined||typeof q[k]==='boolean')&&
-   (q.errors===undefined||num(q.errors));
+   ['retry','solved','skipped','hinted','flipped','loggedActivity'].every(k=>q[k]===undefined||typeof q[k]==='boolean')&&
+   (q.rating===undefined||['right','partial','wrong'].includes(q.rating))&&(q.errors===undefined||num(q.errors));
  const run=s=>obj(s)&&str(s.id)&&str(s.title)&&optDate(s.date)&&typeof s.finished==='boolean'&&Array.isArray(s.queue)&&s.queue.length>0&&
    s.queue.every(task)&&num(s.index)&&(s.finished?s.index===s.queue.length:s.index<s.queue.length)&&(!s.credited||Array.isArray(s.credited)&&s.credited.every(id=>byId.has(id)));
  valid(obj(input)&&[3,5,6].includes(input.version)&&num(input.xp)&&num(input.streak)&&optDate(input.lastDay)&&
@@ -90,9 +90,20 @@ function persist(){
  if(storageBlocked){toast('Сохранение приостановлено. Восстанови резервную копию в разделе «Прогресс».');return false;}
  try{localStorage.setItem(STORE,JSON.stringify(state));return true;}catch{toast('Прогресс не записан. Экспортируй копию до закрытия приложения.');return false;}
 }
+// FNV-1a over the serialized UTF-16 state detects accidental changes in a portable file.
+function backupChecksum(value){
+ let result=0x811c9dc5;
+ for(let i=0;i<value.length;i++)result=Math.imul(result^value.charCodeAt(i),0x01000193);
+ return (result>>>0).toString(16).padStart(8,'0');
+}
+function backupEnvelope(){
+ return JSON.stringify({app:'bora-civic',format:2,checksum:backupChecksum(JSON.stringify(state)),state});
+}
 function restoreChecked(json){
  let incoming;
- try{const data=JSON.parse(json);if(data.app!=='bora-civic')throw Error();incoming=checkedState(data.state);}
+ try{const data=JSON.parse(json);if(data.app!=='bora-civic'||(data.format!==undefined&&data.format!==2))throw Error();
+   if((data.format===2||data.state?.version===6)&&data.checksum!==backupChecksum(JSON.stringify(data.state)))throw Error();
+   incoming=checkedState(data.state);}
  catch{toast('Копия повреждена или несовместима. Текущий прогресс сохранён.');return false;}
  if(!confirm('Заменить текущий прогресс данными из резервной копии?'))return false;
  try{

@@ -36,9 +36,15 @@ async function connect(){
  console.log('WebView ready',await run("JSON.stringify({origin:location.origin,version:state.version,xp:state.xp,keys:Object.keys(localStorage),legacyXp:JSON.parse(localStorage.getItem('bora_civic_v3')||'null')?.xp,locked:typeof storageBlocked==='undefined'?null:storageBlocked})"));
  if(process.argv[2]==='reopen'){assert.equal(await run('state.xp'),100);return;}
  if(process.argv[2]==='legacy'){assert.equal(await run("state.sound=false;start('v0','quiz');while(!session.finished){submitAnswer(true);next();}save();state.xp"),100);assert.equal(await run("JSON.parse(localStorage.getItem('bora_civic_v3')).xp"),100);return;}
- assert.equal(await run('state.xp'),100);
- assert.equal(await run('state.version'),5);
- assert.equal(await run("go('grammar');startGrammar();gradePractice('wrong');gradePractice(activeTask().answers[0]);state.skills[activeTask().key].firstWrong"),1);
+ if(process.argv[2]==='legacy50'){
+  assert.equal(await run('state.xp'),100);assert.equal(await run('state.version'),5);
+  assert.equal(await run("go('grammar');startGrammar();gradePractice('wrong');gradePractice(activeTask().answers[0]);state.skills[activeTask().key].firstWrong"),1);
+  assert.equal(await run('state.xp'),105);return;
+ }
+ assert.equal(await run('state.xp'),105);assert.equal(await run('state.version'),6);
+ assert.equal(await run('state.skills[activeTask().key].firstWrong'),1);
+ assert.equal(await run("go('learn');document.querySelector('[data-topic=g0]').click();document.querySelector('[data-unit]').click();window.reviewKey=activeTask().key;document.querySelector('[data-flip]').click();document.querySelector('[data-grade=wrong]').click();go('reviews');reviewCandidates().some(row=>row.key===reviewKey)"),true);
+ assert.ok(await run("document.documentElement.scrollWidth<=innerWidth && document.querySelectorAll('#nav button').length===3"));
  assert.ok(await run("go('profile');!!backupPlugin()"));
  await run("document.querySelector('[data-export]').click();true");await wait(1800);
  assert.match(adb('shell','dumpsys','activity','activities'),/documentsui|DocumentsActivity/i);
@@ -46,13 +52,13 @@ async function connect(){
  await wait(1200);
  const file=adb('shell','find','/sdcard/Download','-name','bora-progress.json').split('\n')[0];
  assert.ok(file,'Saved JSON in Downloads');
- const saved=JSON.parse(adb('shell','cat',file));assert.equal(saved.state.version,5);
+ const saved=JSON.parse(adb('shell','cat',file));assert.equal(saved.state.version,6);
  assert.equal(saved.state.xp,105);
  await run("state.xp=0;save();window.confirm=()=>true;document.querySelector('[data-import]').click();true");
  await wait(900);
  await tapDocumentNode(node=>/text="bora-progress(?:\.json)?"/i.test(node));
  for(let i=0;i<25&&await run('state.xp')!==105;i++)await wait(300);
  assert.equal(await run('state.xp'),105);
- console.log('Emulator: 4.3 update retained 100 XP, 5.0 WebView practice, real Android SAF file export and restore OK.');
+ console.log('Emulator: 4.3 → 5.0 → 5.1 retained 105 XP and original mistakes. Catalog card, shared review queue, mobile width and Android SAF export/restore OK.');
  }finally{ws.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
