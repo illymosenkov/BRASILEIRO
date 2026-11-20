@@ -50,10 +50,12 @@ function toast(t){$('toast').textContent=t;$('toast').style.display='block';setT
 function initAudio(){try{audioCtx??=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume()}catch{}}
 function sound(ok){if(!state.sound)return;initAudio();if(!audioCtx)return;try{const t=audioCtx.currentTime;const tones=ok?[[523.25,0,.12],[659.25,.10,.13],[783.99,.21,.23]]:[[220,0,.15],[164.81,.13,.22]];tones.forEach(([freq,delay,dur])=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=ok?'sine':'triangle';o.frequency.value=freq;g.gain.setValueAtTime(.0001,t+delay);g.gain.exponentialRampToValueAtTime(.14,t+delay+.015);g.gain.exponentialRampToValueAtTime(.0001,t+delay+dur);o.connect(g);g.connect(audioCtx.destination);o.start(t+delay);o.stop(t+delay+dur+.02)})}catch{}}
 function renderSound(){$('sound').textContent=state.sound?'♪ Звук':'♪ Выкл.';$('sound').setAttribute('aria-pressed',String(state.sound))}
-function mastered(w){return (state.words[w.id]?.wins||0)>=2}
+function mastered(w){
+ const skills=['pt-ru','ru-pt'].map(dir=>state.skills?.[wordKey(w.id,dir)]).filter(s=>s?.checks);
+ return skills.length?skills.every(s=>s.status==='green'):(state.words[w.id]?.wins||0)>=2;
+}
 function dueWords(){return allWords.filter(w=>state.words[w.id]&&state.words[w.id].due<=localDay())}
-function mark(w,ok){let old=state.words[w.id]||{wins:0,interval:0};let interval=ok?Math.min(30,old.interval?old.interval*2:1):0;state.words[w.id]={wins:ok?old.wins+1:Math.max(0,old.wins-1),interval,due:localDay(new Date(Date.now()+interval*86400000))};save()}
-function activity(){const now=localDay();if(state.lastDay!==now){const y=new Date();y.setDate(y.getDate()-1);state.streak=state.lastDay===localDay(y)?state.streak+1:1;state.lastDay=now}state.days[now]=(state.days[now]||0)+1;save()}
+function activity(){const now=localDay();if(state.lastDay!==now){const y=new Date();y.setDate(y.getDate()-1);state.streak=state.lastDay===localDay(y)?state.streak+1:1;state.lastDay=now}state.days[now]=(state.days[now]||0)+1}
 function activeStreak(){const y=new Date();y.setDate(y.getDate()-1);return [localDay(),localDay(y)].includes(state.lastDay)?state.streak:0}
 function progress(t){if(state.completedLevels?.[t.id])return 100;return Math.round(t.words.filter(mastered).length/t.words.length*100)}
 function home(){let learned=allWords.filter(mastered).length,daily=state.days[localDay()]||0;let next=packs.find(p=>progress(p)<100)||packs[0];$('view').innerHTML=`<section class="hero"><img src="${HERO}" alt="Тёмно-зелёный Honda Civic на фоне заката в Рио"><div class="hero-copy"><div class="eyebrow">Твой маршрут в Бразилию</div><h1>Bora<br>aprender?</h1><p>Поехали учить живой португальский.<br>Одно слово — ещё один поворот.</p></div></section><div class="stats"><div class="stat"><b>${activeStreak()}</b><small>дней подряд</small></div><div class="stat"><b>${state.xp}</b><small>опыт · XP</small></div><div class="stat"><b>${learned}</b><small>слов закреплено</small></div></div><div class="content" style="padding-top:0"><div class="card daily"><div class="eyebrow">Ежедневный заезд</div><h2>${daily>=10?'Цель выполнена!':'10 ответов сегодня'}</h2><p>${Math.min(daily,10)} из 10 · небольшие шаги каждый день</p><div class="bar"><i style="width:${Math.min(daily/10,1)*100}%"></i></div><button class="btn wide" data-start="${next.id}">Продолжить маршрут →</button></div><div class="card"><div class="eyebrow">Pit stop · повторение</div><h3 style="margin:6px 0">${dueWords().length?dueWords().length+' слов ждут тебя':'Закрепим изученное'}</h3><p class="muted" style="margin:5px 0 15px">Ошибки возвращаются в тренировку.</p>${recallButtons('review')}</div><button class="phrase-banner" data-go="funk"><span class="big">🎧</span><span><b>Бразильский фанк и сленг</b><small>Танец, бит, флирт и слова из наших уроков →</small></span></button><button class="phrase-banner" data-go="phrases"><span class="big">💬</span><span><b>На все случаи жизни</b><small>128 фраз · кафе, работа, гараж, поездки →</small></span></button><div class="mascot-tip"><img src="${MASCOT}" alt="Твой Civic"><span><b>Civic ждёт твоей победы</b>Заверши урок — и он устроит праздничный заезд.</span></div><div class="section-head"><h2>Твои направления</h2><button class="back" data-go="learn">Все темы →</button></div><div class="topic-grid">${topicTile(packs[0])}${topicTile(topics[9])}${topicTile(topics[10])}${topicTile(topics[0])}</div><p class="footnote">300 глаголов в 18 темах · 128 фраз · ${topics.length} темы · ${topics.reduce((n,t)=>n+t.words.length,0)} существительных<br>Все уроки и звуки работают без интернета.</p></div>`}
@@ -75,95 +77,19 @@ function recallButtons(id) {
   </div>`;
 }
 
-function recallCard(q, mode) {
-  const reverse = mode === 'ru-pt';
-  const prompt = reverse ? q.w.meaning : (q.w.inf || q.w.word);
-  return `<div class="question">
-    <div class="eyebrow">${q.retry ? 'Повтор ошибки · ' : ''}${reverse ? 'RU → PT' : 'PT → RU'}</div>
-    <h2>${reverse ? 'Как это сказать по-португальски?' : 'Как это перевести на русский?'}</h2>
-    <div class="question-card recall-card"><div class="phrase-line" lang="${reverse ? 'ru' : 'pt-BR'}">${esc(prompt)}</div></div>
-  </div>
-  <form id="write-form">
-    <label for="typed" class="muted">Напиши ответ или вспомни его про себя.</label>
-    <input class="input" id="typed" lang="${reverse ? 'pt-BR' : 'ru'}" placeholder="Твой ответ"
-      autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="done">
-    <button class="btn wide" type="submit">Проверить ответ</button>
-  </form>
-  <div id="flash-actions" class="recall-reveal"><button class="btn secondary wide" data-reveal>Показать ответ</button></div>
-  <div id="feedback" role="status" aria-live="polite"></div>`;
-}
-
-function recallAnswer(q, answer) {
-  const word = q.w;
-  if (session.mode === 'ru-pt') {
-    const valid = (word.inf || word.word).split(' / ');
-    if (word.type === 'noun') {
-      valid.push(word.word.replace(/^(o|a|os|as) /, ''));
-    }
-    return valid.some(text => normalizeRecall(text, true) === normalizeRecall(answer, true));
-  }
-  const valid = [word.meaning, ...word.meaning.split(/\s*[/;]\s*/)];
-  const normalized = normalizeRecall(answer, false);
-  return valid.some(text => [text, text.replace(/\s*\([^)]*\)([.!?]?)\s*$/, '$1')]
-    .some(variant => normalizeRecall(variant, false) === normalized));
-}
-
 function normalizeRecall(text, portuguese) {
   const lower = text.toLowerCase().normalize('NFC');
   const letters = portuguese ? lower.normalize('NFD').replace(/\p{M}/gu, '') : lower.replaceAll('ё', 'е');
   return letters.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
-function answerDetails(w) {
-  const correct = w.type === 'verb' ? `${w.inf} → eu ${w.eu}` : w.word;
-  const hint = w.type === 'verb' ? `${w.pron} → эу ${w.euPron}` : w.pron;
-  return `<p><span lang="pt-BR">${esc(correct)}</span><br><span class="pron">${esc(hint)}</span><br>${esc(w.meaning)}</p>
-    ${w.note ? `<p class="word-note">${esc(w.note)}</p>` : ''}`;
+function start(id,mode='pt-ru',words=null){
+  const deck=words?{title:'Повторение',words}:getLesson(id);
+  if(!deck)return;
+  const queue=deck.words.map(w=>mode==='write'?taskForKey(grammarKey(w.inf,0,0)):wordTask(w.id,mode==='ru-pt'?'ru-pt':'pt-ru',mode==='quiz'?'choice':'recall'));
+  beginPractice(deck.title,queue,'',words?'review':'topic',words?'':id);
 }
-function start(id,mode='pt-ru',words=null){const t=words?{id:'review',title:'Повторение',words}:getLesson(id);if(!t)return;initAudio();session={lesson:t,mode,queue:shuffle(t.words).map((w,i)=>({w,kind:mode==='write'?'write':w.type==='verb'&&(i%2===1)?'eu':'meaning',retry:false})),index:0,answered:false,revealed:false,firstRight:0,attempts:0,repeats:0,awarded:new Set(),finished:false};screen='session';nav();renderQuestion();window.scrollTo(0,0)}
-function review(mode='pt-ru'){
-  const candidates=reviewCandidates().filter(x=>x.key.startsWith('word|'));
-  const ids=[...new Set(candidates.map(x=>x.key.split('|')[1]))];
-  if(!ids.length){go('blocks');return;}
-  const ranked=ids.map(id=>{
-    const key=wordKey(id,mode),skill=state.skills[key];
-    return skill?{key,...rankSkill(skill,localDay())}:{key,weak:false,score:0,overdue:0};
-  });
-  start(null,mode,reviewSelection(ranked,10,settings().focus).map(x=>byId.get(x.key.split('|')[1])));
-}
-function answerText(q,w=q.w){return q.kind==='meaning'?w.meaning:q.kind==='eu'?'eu '+w.eu:w.eu}
-function renderQuestion(){let s=session;if(s.index>=s.queue.length){finish();return}const q=s.queue[s.index],w=q.w;s.answered=false;s.revealed=false;const p=s.index/s.queue.length*100;let body='';if(isRecall(s.mode)){body=recallCard(q,s.mode)}else{const prompt=q.kind==='meaning'?(w.type==='phrase'?'Как переводится эта фраза?':'Как переводится это слово?'):q.kind==='eu'?'Выбери форму «я» в настоящем':'Напиши форму eu';let options='';if(q.kind==='write'){options=`<form id="write-form"><label for="typed" class="muted">Пиши без eu. Ударения можно не вводить.</label><input class="input" id="typed" placeholder="eu …" autocomplete="off" autocapitalize="none" spellcheck="false"><button class="btn wide" type="submit">Проверить ответ</button></form>`}else{const pool=allWords.filter(x=>x.type===w.type&&x.id!==w.id&&(w.type!=='phrase'||x.topic===w.topic));const distract=shuffle([...new Set(pool.map(x=>answerText(q,x)).filter(x=>x!==answerText(q)))]).slice(0,3);s.options=shuffle([answerText(q),...distract]);options=s.options.map((v,i)=>`<button class="option" data-choice="${i}">${esc(v)}</button>`).join('')}body=`<div class="question"><div class="eyebrow">${q.retry?'Ещё раз · закрепляем':q.kind==='meaning'?'Перевод':'Presente · eu'}</div><h2>${prompt}</h2><div class="question-card"><div class="${w.type==='phrase'?'phrase-line':'question-word'}">${esc(w.inf||w.word)}</div><div class="pron">${esc(w.pron)}</div></div></div><div id="options">${options}</div><div id="feedback" role="status" aria-live="polite"></div>`}$('view').innerHTML=`<div class="content"><div class="session-top"><button class="back" data-go="${lessonPage(s.lesson.id)}" aria-label="Выйти из урока">✕</button><div class="bar"><i style="width:${p}%"></i></div><span class="session-count">${s.index+1}/${s.queue.length}</span></div><div class="pack-name">${esc(s.lesson.title)}</div>${body}<p class="footnote">Звуки ответов можно отключить кнопкой ♪ сверху.</p></div>`}
-const normalize=s=>String(s).trim().toLowerCase().replace(/^eu\s+/,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
-function choose(i){if(!session||session.answered)return;const q=session.queue[session.index];submitAnswer(session.options[i]===answerText(q),i)}
-function writeAnswer(){if(!session||session.answered||session.revealed)return;const value=$('typed').value;if(!value.trim()){toast('Сначала напиши ответ.');$('typed').focus();return}const question=session.queue[session.index];
-  if (isRecall(session.mode)) {
-    if (recallAnswer(question, value)) submitAnswer(true);
-    else reveal(value);
-    return;
-  }
-  submitAnswer(normalize(value)===normalize(question.w.eu));
-}
-function submitAnswer(ok,choice){const s=session;if(!s||s.answered)return;s.answered=true;const q=s.queue[s.index],w=q.w;legacyAnswer(s,q,ok);s.attempts++;if(ok&&!q.retry&&!s.revealed)s.firstRight++;if(!ok&&!q.retry){s.queue.splice(Math.min(s.index+7,s.queue.length),0,{...q,probe:undefined,retry:true});s.repeats++}mark(w,ok);activity();if(ok&&!s.awarded.has(w.id)){s.awarded.add(w.id);state.xp+=10;save()}sound(ok);document.querySelectorAll('.option').forEach((b,i)=>{b.disabled=true;if(s.options[i]===answerText(q))b.classList.add('correct');else if(i===choice)b.classList.add('wrong')});if($('typed')){$('typed').disabled=true;$('write-form').querySelector('button').disabled=true}$('flash-actions')?.replaceChildren();$('feedback').className='feedback'+(ok?'':' bad');$('feedback').innerHTML=`<b>${ok?'Muito bem! Правильно':'Почти! Попробуем ещё раз'}</b>${answerDetails(w)}<button class="btn wide" data-next>${s.index===s.queue.length-1?'Результат':'Дальше →'}</button>`;$('feedback').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'})}
-function next(){if(!session?.answered)return;session.index++;renderQuestion();window.scrollTo(0,0)}
-function reveal(typedAnswer = '') {
-  if (!session || session.revealed || session.answered) return;
-  legacyReveal(session,session.queue[session.index],typedAnswer);
-  session.revealed = true;
-  const word = session.queue[session.index].w;
-  $('write-form').hidden = true;
-  $('flash-actions').replaceChildren();
-  $('feedback').className = 'feedback';
-  $('feedback').innerHTML = `
-      <b>${typedAnswer ? 'Сравни свой ответ с вариантом' : 'Ответ'}</b>
-      ${typedAnswer ? `<p>Твой вариант — ${esc(typedAnswer)}</p>` : ''}
-      ${answerDetails(word)}
-      <div class="actions">
-        <button class="btn danger" data-rate="0">Не вспомнил</button>
-        <button class="btn" data-rate="1">Вспомнил ✓</button>
-      </div>`;
-  $('feedback').scrollIntoView({block:'nearest'});
-}
-
+function review(){go('reviews');}
 function dictionary(){ $('view').innerHTML=`<div class="content"><div class="eyebrow">Seu vocabulário</div><h2 style="font-size:30px;margin:7px 0">Мой словарь</h2><p class="muted">${allWords.length} слов с русскими подсказками</p><div class="search"><input class="input" id="search" aria-label="Поиск слов" placeholder="falar, машина, говорить…"><div class="chips"><button class="chip ${dictionaryTab==='all'?'active':''}" data-dict="all">Все</button><button class="chip ${dictionaryTab==='verb'?'active':''}" data-dict="verb">Глаголы</button><button class="chip ${dictionaryTab==='noun'?'active':''}" data-dict="noun">Существительные</button><button class="chip ${dictionaryTab==='phrase'?'active':''}" data-dict="phrase">Фразы</button></div></div><div class="muted" id="found"></div><div id="word-list" class="card" style="margin-top:14px"></div>${pronunciationNote()}</div>`;dictionaryResults()}
 function dictionaryResults(){const q=($('search')?.value||'').trim().toLowerCase();const words=allWords.filter(w=>(dictionaryTab==='all'||w.type===dictionaryTab)&&[w.inf,w.word,w.eu,w.meaning,w.pron,w.euPron].filter(Boolean).join(' ').toLowerCase().includes(q));$('found').textContent='Найдено: '+words.length;$('word-list').innerHTML=words.length?words.map(wordRow).join(''):'<div class="empty">Ничего не найдено</div>'}
 function backupPlugin() {
@@ -266,23 +192,11 @@ function getLesson(id) {
 function topicTile(t){const p=progress(t);return `<button class="topic ${t.words[0].type==='phrase'?'phrase-topic':''}" data-lesson="${t.id}"><span class="emoji">${t.emoji}</span><b>${esc(t.title)}</b><small>${t.words.length} ${t.id.startsWith('p')?'фраз':t.id.startsWith('g')?'глаголов':'слов'} · ${p}% закреплено</small><div class="mini"><i style="width:${p}%"></i></div></button>`}
 function wordRow(w){return `<div class="row"><span class="article">${w.type==='verb'?'инфинитив':w.type==='phrase'?'слово или выражение':w.type==='basic'?'базовая лексика':w.word.startsWith('a ')?'женский род':'мужской род'}</span>${mastered(w)?'<span class="check">✓</span>':''}<div class="${w.type==='phrase'?'phrase-line':'word'}">${esc(w.inf||w.word)}</div><div class="pron">${esc(w.pron)}</div>${w.type==='verb'?`<div class="form">eu ${esc(w.eu)}</div><div class="pron">эу ${esc(w.euPron)}</div>`:''}<div class="translation">${esc(w.meaning)}</div>${w.note ? `<p class="word-note">${esc(w.note)}</p>` : ''}</div>`}
 function lesson(id){const t=getLesson(id);if(!t)return;stopVictory();screen='lesson';nav();const group=t.id.startsWith('g'),phrase=t.id.startsWith('p'),first=group?(t.children.find(c=>progress(c)<100)||t.children[0]):t;const back=lessonPage(id);$('view').innerHTML=`<div class="content"><button class="back" data-go="${back}">← ${back==='phrases'?'Все ситуации':'Все темы'}</button><div class="lesson-head"><div class="lesson-icon">${t.emoji}</div><div><h2>${esc(t.title)}</h2><p class="muted">${t.words.length} ${phrase?'фраз':'слов'} · ${progress(t)}% закреплено</p></div></div><div class="card"><h3>Пройти небольшими блоками</h3>${blockButtons(blocks.filter(b=>b.parent===(t.groupId||t.id)))}</div>${recallButtons(first.id)}<div class="actions"><button class="btn secondary" data-quiz="${first.id}">Выбор ответа</button>${t.words[0].type==='verb'?`<button class="btn secondary" data-write="${first.id}">Написать eu</button>`:''}</div>${group?`<div class="lesson-chunks">${t.children.map((c,i)=>`<button class="chunk" data-lesson="${c.id}"><span><b>Урок ${i+1}</b><small>${c.words.length} глаголов · ${progress(c)}% закреплено<br>${c.words.slice(0,3).map(w=>esc(w.inf)).join(', ')}…</small></span><span class="arrow">→</span></button>`).join('')}</div>`:''}<div class="card">${t.words.map(wordRow).join('')}</div>${pronunciationNote()}</div>`;window.scrollTo(0,0)}
-function finish(){const s=session;if(!s||s.finished)return;s.finished=true;if(s.lesson.id!=='review'){state.completedLevels[s.lesson.id]=true;}Bora.refreshToday?.();save();const total=s.lesson.words.length,accuracy=s.attempts?Math.round(s.firstRight/total*100):0,phrase=s.lesson.words[0]?.type==='phrase';$('view').innerHTML=`<div class="content"><div class="result"><div class="eyebrow">Уровень пройден</div><h1>Boa, Илья!</h1><p>Ты прошёл «${esc(s.lesson.title)}».<br>${s.repeats?'Ошибки сохранены для повторения.':'Чистый круг — без ошибок!'}</p>${victoryScene()}<div class="result-stats"><div><b>+${s.awarded.size*10}</b><small>XP за урок</small></div><div><b>${accuracy}%</b><small>с первого раза</small></div><div><b>${total}</b><small>${phrase?'фраз пройдено':'слов пройдено'}</small></div></div><button class="btn wide" data-next-pack>Следующий маршрут →</button><div style="margin-top:14px"><button class="btn secondary wide" data-go="home">На главную</button></div><p class="footnote">Звуки мотора и отстрелов отключаются кнопкой ♪ сверху. Проезд синхронизирован с твоей записью. Прогресс сохранён.</p></div></div>`;playVictory()}
-function nextPack() {
-  stopVictory();
-  const {lesson, mode} = session;
-  if (lesson.id === 'review') {
-    review(mode);
-    return;
-  }
-  const list = {v: packs, p: phraseTopics, n: topics, f: funkTopics}[lesson.id[0]];
-  const index = list.findIndex(t => t.id === lesson.id);
-  start(list[(index + 1) % list.length].id, mode);
-}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopVictory()});
 
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;if(d.go)go(d.go);else if('victory'in d)playVictory();else if(d.tab){tab=d.tab;learn()}else if(d.lesson)lesson(d.lesson);else if(d.start)start(d.start);else if(d.recall){if(d.deck==='review')review(d.recall);else start(d.deck,d.recall)}
-else if(d.quiz)start(d.quiz,'quiz');else if(d.write)start(d.write,'write');else if('choice'in d)choose(Number(d.choice));else if('next'in d)next();else if('reveal'in d)reveal();else if('rate'in d)submitAnswer(d.rate==='1');else if('nextPack'in d)nextPack();else if(d.dict){dictionaryTab=d.dict;dictionary()}else if('sound'in d){toggleSound();go('profile')}else if('test'in d)sound(d.test==='1');else if('export'in d)exportProgress();else if('import'in d)chooseProgressFile()});
-document.addEventListener('submit',e=>{if(e.target.id==='write-form'){e.preventDefault();writeAnswer()}});document.addEventListener('input',e=>{if(e.target.id==='search')dictionaryResults()});document.addEventListener('change',e=>{if(e.target.id==='import'&&e.target.files[0]){const file=e.target.files[0];e.target.value='';importProgress(file)}});$('sound').onclick=toggleSound;
+else if(d.quiz)start(d.quiz,'quiz');else if(d.write)start(d.write,'write');else if(d.dict){dictionaryTab=d.dict;dictionary()}else if('sound'in d){toggleSound();go('profile')}else if('test'in d)sound(d.test==='1');else if('export'in d)exportProgress();else if('import'in d)chooseProgressFile()});
+document.addEventListener('input',e=>{if(e.target.id==='search')dictionaryResults()});document.addEventListener('change',e=>{if(e.target.id==='import'&&e.target.files[0]){const file=e.target.files[0];e.target.value='';importProgress(file)}});$('sound').onclick=toggleSound;
 </script>
 <script src="paradigms.js"></script>
 <script src="verb-context.js"></script>

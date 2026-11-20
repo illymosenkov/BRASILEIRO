@@ -76,9 +76,5 @@ document.addEventListener('click',e=>{
 const memoryAdvance=Bora.beforeAdvance;
 Bora.beforeAdvance=(s,q)=>{
  if(q.mode==='intro'){state.exposure??={};state.exposure[q.key.split('|')[1]]??=localDay();}
- if(q.solved&&!q.retry&&!q.errors&&!q.hinted&&q.key.startsWith('word|')){
-  const id=q.key.split('|')[1];s.credited??=[];
-  if(!s.credited.includes(id)){s.credited.push(id);mark(byId.get(id),true);}
- }
  memoryAdvance(s,q);
 };

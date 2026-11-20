@@ -55,32 +55,10 @@ function recordEvent(model,q,kind,sessionId,day=localDay(),method='typed',source
   s.status=!s.checks?'neutral':s.streak>=3&&s.confidence>=70?'green':!s.streak&&event.firstOutcome==='wrong'?'red':s.status==='red'&&event.retry?'red':'yellow';
   return true;
 }
-Bora.attempt=(q,ok,id)=>recordEvent(state,q,ok?'right':'wrong',id);
-Bora.noteHint=(q,id)=>recordEvent(state,q,'hint',id);
-function legacyProbe(s,q) {
-  if(!q.probe){
-    const isForm=!isRecall(s.mode)&&q.kind!=='meaning';
-    q.probe={key:isForm?grammarKey(q.w.inf,0,0):wordKey(q.w.id,s.mode==='ru-pt'?'ru-pt':'pt-ru'),mode:s.mode,retry:q.retry};
-  }
-  s.uid??=newId();return q.probe;
-}
-function legacyAnswer(s,q,ok){
-  const probe=legacyProbe(s,q);
-  if(s.revealed){
-    state.selfRatings??={};
-    const ratings=state.selfRatings[probe.key]??={known:0,unknown:0};
-    ratings[ok?'known':'unknown']++;
-  }else Bora.attempt(probe,ok,s.uid);
-}
-function legacyReveal(s,q,typed){
-  const probe=legacyProbe(s,q);
-  if(typed)Bora.attempt(probe,false,s.uid);
-  Bora.noteHint(probe,s.uid);save();
-}
 Bora.beforeAdvance=(s,q)=>{
-  if((!q.errors&&!q.hinted)||q.retry||!q.answers)return;
+  if((!q.errors&&!q.hinted&&q.rating!=='partial')||q.retry||!q.answers)return;
   const again={...q,retry:true};
-  for(const k of ['trial','errors','hinted','solved','skipped'])delete again[k];
+  for(const k of ['trial','errors','hinted','solved','skipped','flipped','rating','loggedActivity'])delete again[k];
   let gap=Math.min(6,s.queue.length-s.index-1);
   // At the end of a short lesson, borrow distinct exercises already seen in it.
   const used=new Set([q.key,...s.queue.slice(s.index+1,s.index+1+gap).map(x=>x.key)]);
@@ -88,7 +66,7 @@ Bora.beforeAdvance=(s,q)=>{
     if(gap>=5)break;
     if(!old.answers||used.has(old.key))continue;
     used.add(old.key);
-    s.queue.push({...old,retry:true,trial:undefined,errors:0,hinted:false,solved:false,skipped:false});
+    s.queue.push({...old,flipped:false,rating:undefined,loggedActivity:false,retry:true,trial:undefined,errors:0,hinted:false,solved:false,skipped:false});
     gap++;
   }
   if(gap)s.queue.splice(s.index+1+gap,0,again);

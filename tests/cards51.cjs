@@ -1,0 +1,11 @@
+const {app,assert}=require('./dom.cjs');
+const a=app();const {run,click,w,find}=a;
+run("start('v0','pt-ru')");const key=run('activeTask().key');click('[data-flip]');click('[data-grade=wrong]');
+assert.equal(run('state.skills['+JSON.stringify(key)+'].firstWrong'),1);
+assert.ok(run('weakRows().length===1'));
+run("go('preferences')");find('#answer-mode').value='typed';find('#answer-mode').dispatchEvent(new w.Event('change',{bubbles:true}));
+run("beginPractice('Проверка',[taskForKey("+JSON.stringify(key)+")]);");assert.ok(find('#practice-input'));run("gradePractice('ошибка');gradePractice(activeTask().answers[0])");
+assert.equal(run('Object.values(state.skills)[0].firstRight'),0);
+assert.equal(run("matchesAnswer(formTask('ter',0,4,'recall'),'tem')"),false);
+assert.equal(run("matchesAnswer(formTask('fazer',0,0,'recall'),'FACO')"),true);
+a.dom.window.close();console.log('Original pack → card miss → shared weak skill; typed correction and grammar collisions OK.');

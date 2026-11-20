@@ -1,4 +1,4 @@
-const defaults=()=>({focus:60,intensity:'normal'});
+const defaults=()=>({focus:60,intensity:'normal',answerMode:'card'});
 const settings=()=>state.preferences??=defaults();
 const knowledge={neutral:'Не изучено',red:'Слабое знание',yellow:'Неуверенно',green:'Уверенно'};
 let weakFilter='Все';
@@ -66,7 +66,7 @@ function selectedReviews(n,day=localDay()){
 }
 function weakRows(){
   return Object.entries(state.skills||{}).filter(([k,s])=>s.checks&&describeKey(k)&&
-    (s.status==='red'||(s.status!=='green'&&(s.firstWrong||s.hints)))).sort((a,b)=>rankSkill(b[1],localDay()).score-rankSkill(a[1],localDay()).score)
+    (s.status==='red'||(s.status!=='green'&&(s.firstWrong||s.hints||s.partials)))).sort((a,b)=>rankSkill(b[1],localDay()).score-rankSkill(a[1],localDay()).score)
     .filter(([k])=>weakFilter==='Все'||describeKey(k).category===weakFilter||(weakFilter==='Сленг'&&describeKey(k).w.id.startsWith('f:')&&Number(describeKey(k).w.id.split(':')[1])>=2));
 }
 const percent=(n,total)=>total?Math.round(100*n/total)+'%':'—';
@@ -94,8 +94,8 @@ function reviewPage(){
   $('view').innerHTML='<div class="content"><h2>Повторения</h2><div class="card"><p>Доступно для повторения: '+n+'. Акцент на слабых словах — '+settings().focus+'%.</p>'+(n?'<button class="btn wide" data-review-now>Начать повторение</button>':'<button class="btn wide" data-go="learn">Выбрать первую тему</button>')+'</div><button class="btn secondary wide" data-go="weak">Мои слабые слова</button></div>';
 }
 function preferencesPage(){
-  $('view').innerHTML='<div class="content"><h2>Настройки занятий</h2><div class="card"><label class="field">Акцент на слабых словах<input id="focus-slider" type="range" min="0" max="100" step="10" value="'+settings().focus+'"></label><b id="focus-value"></b><p class="muted">Доля заданий при повторении уже знакомого материала.</p></div><div id="pace"></div><button class="btn secondary wide" data-go="profile">Прогресс и резервная копия</button></div>';
-  focusValue();Bora.paceControl?.();
+  $('view').innerHTML='<div class="content"><h2>Настройки занятий</h2><div class="card"><label class="field">Акцент на слабых словах<input id="focus-slider" type="range" min="0" max="100" step="10" value="'+settings().focus+'"></label><b id="focus-value"></b><p class="muted">Доля заданий при повторении уже знакомого материала.</p></div><div class="card"><label class="field">Как отвечать<select class="input" id="answer-mode"><option value="card">Карточки с самооценкой</option><option value="typed">Ввод с клавиатуры</option></select></label></div><div id="pace"></div><button class="btn secondary wide" data-go="profile">Прогресс и резервная копия</button></div>';
+  $('answer-mode').value=settings().answerMode;focusValue();Bora.paceControl?.();
 }
 function focusValue(){if($('focus-value'))$('focus-value').textContent=settings().focus+'% слабых · '+(100-settings().focus)+'% остальных';}
 Object.assign(Bora.pages,{weak:weakPage,reviews:reviewPage,preferences:preferencesPage});
@@ -106,3 +106,5 @@ document.addEventListener('click',e=>{
  if('errors' in d)beginPractice('Работа над ошибками',weakRows().slice(0,10).map(([k])=>taskForKey(k)));
  if('reviewNow' in d)beginPractice('Интервальное повторение',selectedReviews(10).map(taskForKey));
 });
+
+document.addEventListener('change',e=>{if(e.target.id==='answer-mode'){settings().answerMode=e.target.value;save();}});
