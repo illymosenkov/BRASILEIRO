@@ -6,6 +6,8 @@ const raw=JSON.stringify(old),b=app({bora_civic_v5:raw});
 assert.equal(b.w.localStorage.getItem('bora_civic_v5'),raw);
 assert.equal(b.run('state.version'),6);assert.equal(b.run('state.xp'),180);
 assert.ok(b.run('state.achievements.firstLesson'));assert.equal(b.run('Object.keys(state.skills).length'),0);
+b.run("go('weak')");assert.ok(b.find('#view').textContent.includes('не вспомнил 1'));
+assert.ok(b.run("seenWord('v:fazer')&&reviewCandidates().some(x=>x.key==='word|v:fazer|pt-ru')"));
 for(const [kind,id] of [['partial','v:ser'],['right','v:ter'],['wrong','v:ir']]){
  b.w.args={kind,id};b.run("const q={mode:'recall',key:wordKey(args.id,'pt-ru')};recordEvent(state,q,args.kind,'one',localDay(),'card','topic');recordEvent(state,q,args.kind,'one',localDay(),'card','topic');save()");
 }

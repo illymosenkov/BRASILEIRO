@@ -71,8 +71,12 @@ function selectedReviews(n,day=localDay()){
   return shuffle(reviewSelection(reviewCandidates(day),n,settings().focus).map(x=>x.key));
 }
 function weakRows(){
-  return Object.entries(state.skills||{}).filter(([k,s])=>s.checks&&describeKey(k)&&
-    (s.status==='red'||(s.status!=='green'&&(s.firstWrong||s.hints||s.partials)))).sort((a,b)=>rankSkill(b[1],localDay()).score-rankSkill(a[1],localDay()).score)
+  const measured=Object.entries(state.skills||{}).filter(([k,s])=>s.checks&&describeKey(k)&&
+    (s.status==='red'||(s.status!=='green'&&(s.firstWrong||s.hints||s.partials))));
+  const historical=Object.entries(state.selfRatings||{}).filter(([k,r])=>r.unknown&&!state.skills?.[k]?.checks&&describeKey(k))
+    .map(([k,r])=>[k,{historical:true,unknown:r.unknown,known:r.known}]);
+  const priority=s=>s.historical?2+s.unknown:rankSkill(s,localDay()).score;
+  return [...measured,...historical].sort((a,b)=>priority(b[1])-priority(a[1]))
     .filter(([k])=>weakFilter==='Все'||describeKey(k).category===weakFilter||(weakFilter==='Сленг'&&describeKey(k).w.id.startsWith('f:')&&Number(describeKey(k).w.id.split(':')[1])>=2));
 }
 const percent=(n,total)=>total?Math.round(100*n/total)+'%':'—';
@@ -85,7 +89,7 @@ function trend(s){
 }
 function difficultVerbs(rows){
  const tally=new Map();
- for(const [key,s] of rows){const {w}=describeKey(key);if(w.type==='verb')tally.set(w.inf,(tally.get(w.inf)||0)+s.errors);}
+ for(const [key,s] of rows){const {w}=describeKey(key);if(w.type==='verb')tally.set(w.inf,(tally.get(w.inf)||0)+(s.errors||0));}
  const leaders=[...tally].filter(([,n])=>n).sort((a,b)=>b[1]-a[1]).slice(0,5);
  return leaders.length?'<details class="card"><summary>Глаголы с наибольшим числом ошибок</summary>'+leaders.map(([v,n])=>'<p>'+esc(v)+' · '+n+'</p>').join('')+'</details>':'';
 }
@@ -93,11 +97,11 @@ function weakPage(){
   const rows=weakRows();
   $('view').innerHTML='<div class="content"><h2>Мои слабые слова</h2><label class="field">Материал<select class="input" id="weak-filter">'+['Все','Обычные слова','Глаголы','Спряжения','Разговорные выражения','Сленг','Фразы из фонка'].map(x=>'<option '+(x===weakFilter?'selected':'')+'>'+x+'</option>').join('')+'</select></label>'+
     (rows.length?'<button class="btn wide" data-errors>Работа над ошибками · '+Math.min(10,rows.length)+'</button>':'<p class="note-box">Пока нет ошибок в этой категории. Результаты появятся после проверочных упражнений.</p>')+
-    difficultVerbs(rows)+rows.map(([k,s])=>'<div class="card"><b>'+esc(describeKey(k).title)+'</b><p><span class="skill-state '+s.status+'">'+knowledge[s.status]+'</span>'+' · ошибок '+s.errors+' · с первого раза '+percent(s.firstRight,s.checks)+'</p><small>'+trend(s)+'<br>Последний ответ '+s.last+' · следующее повторение '+s.due+'</small></div>').join('')+'</div>';
+    difficultVerbs(rows)+rows.map(([k,s])=>s.historical?'<div class="card"><b>'+esc(describeKey(k).title)+'</b><p>Самооценка в предыдущей версии · не вспомнил '+s.unknown+' · вспомнил '+s.known+'</p></div>':'<div class="card"><b>'+esc(describeKey(k).title)+'</b><p><span class="skill-state '+s.status+'">'+knowledge[s.status]+'</span>'+' · ошибок '+s.errors+' · с первого раза '+percent(s.firstRight,s.checks)+'</p><small>'+trend(s)+'<br>Последний ответ '+s.last+' · следующее повторение '+s.due+'</small></div>').join('')+'</div>';
 }
 function reviewPage(){
   const n=reviewCandidates().length;
-  $('view').innerHTML='<div class="content"><h2>Повторения</h2><div class="card"><p>Доступно для повторения: '+n+'. Акцент на слабых словах — '+settings().focus+'%.</p>'+(n?'<button class="btn wide" data-review-now>Начать повторение</button>':'<button class="btn wide" data-go="learn">Выбрать первую тему</button>')+'</div><button class="btn secondary wide" data-go="weak">Мои слабые слова</button></div>';
+  $('view').innerHTML='<div class="content"><h2>Повторения</h2><div class="card"><p>Доступно для повторения: '+n+'. Акцент на слабых словах — '+settings().focus+'%.</p>'+(n?'<button class="btn wide" data-review-now>Начать повторение</button>':'<button class="btn wide" data-go="learn">Открыть каталог</button>')+'</div><button class="btn secondary wide" data-go="weak">Мои слабые слова</button></div>';
 }
 function preferencesPage(){
   $('view').innerHTML='<div class="content"><h2>Настройки занятий</h2><div class="card"><label class="field">Акцент на слабых словах<input id="focus-slider" type="range" min="0" max="100" step="10" value="'+settings().focus+'"></label><b id="focus-value"></b><p class="muted">Доля заданий при повторении уже знакомого материала.</p></div><div class="card"><label class="field">Как отвечать<select class="input" id="answer-mode"><option value="card">Карточки с самооценкой</option><option value="typed">Ввод с клавиатуры</option></select></label></div><div id="pace"></div><button class="btn secondary wide" data-go="profile">Прогресс и резервная копия</button></div>';

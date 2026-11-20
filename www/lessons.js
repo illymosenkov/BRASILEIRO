@@ -25,7 +25,9 @@ function addBlocks(group,names=[]){
 }
 foundation.forEach(g=>addBlocks(g));verbGroups.forEach(g=>addBlocks(g));topics.forEach((g,i)=>addBlocks(g,nounNames[i]));phraseTopics.forEach((g,i)=>addBlocks(g,phraseNames[i]));funkTopics.forEach(g=>addBlocks(g));
 function seenWord(id){
- return !!(state.exposure?.[id]||state.words[id]||state.skills?.[wordKey(id,'ru-pt')]?.checks||state.skills?.[wordKey(id,'pt-ru')]?.checks);
+ return !!(state.exposure?.[id]||state.words[id]||['ru-pt','pt-ru'].some(dir=>{
+  const k=wordKey(id,dir),rating=state.selfRatings?.[k];return state.skills?.[k]?.checks||rating?.known||rating?.unknown;
+ }));
 }
 const nounExamples={
  'n:0:0':['O pão está quente.','Хлеб горячий.'],'n:0:1':['O arroz está pronto.','Рис готов.'],'n:0:2':['Vou preparar o feijão.','Я приготовлю фасоль.'],

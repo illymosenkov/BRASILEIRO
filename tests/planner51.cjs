@@ -9,5 +9,6 @@ run("go('reviews')");click('[data-review-now]');click('[data-flip]');click('[dat
 assert.ok(run("!reviewCandidates().some(x=>x.key===wordKey(target,'ru-pt'))"));
 assert.ok(run("!ensureCalendar().reviews.includes(wordKey(target,'ru-pt'))"));
 assert.ok(run("state.skills[wordKey(target,'ru-pt')].history.map(h=>h.source).join('/')==='topic/review'"));
+a.run("go('profile')");assert.ok(a.find('#view').textContent.includes('1 / 2 · 50%'));
 const before=run("JSON.stringify(state.calendar)");run("go('calendar');go('home')");assert.equal(run("JSON.stringify(state.calendar)"),before);
 setImmediate(()=>a.dom.window.close());console.log('Catalog, dated plan, independent direction and real review session share one skill; tomorrow and today reconciled.');

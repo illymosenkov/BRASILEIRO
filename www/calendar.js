@@ -25,7 +25,7 @@ function routeBlocks(day){
  ['p0','base0','g0'],['g0','base0','g1'],['p0','p1','g1'],['n0','n1','base1'],
  ['p2','base0','g0'],['base0','base1','g2'],['p14','f0','f1']
  ][weekday];
- if(!Object.keys(state.words).length&&!Object.keys(state.exposure||{}).length){
+ if(!Object.keys(state.words).length&&!Object.keys(state.exposure||{}).length&&!Object.keys(state.skills||{}).length&&!Object.keys(state.selfRatings||{}).length){
    order.unshift('base0','p0','g0');
  }
  const preferred=blocks.filter(b=>order.includes(b.parent)).sort((a,b)=>order.indexOf(a.parent)-order.indexOf(b.parent));
@@ -36,7 +36,7 @@ function planFor(day,reserved=new Set()){
  const weekend=new Date(day+'T12:00:00').getDay()===0;
  let capacity=weekend?0:pace[2];
  if(profile.difficult||profile.due>=12)capacity=Math.max(weekend?0:2,Math.floor(capacity/2));
- if(profile.strong&&!weekend&&setting==='normal')capacity=7;
+ if(profile.strong&&!profile.difficult&&profile.due<12&&!weekend&&setting==='normal')capacity=7;
  const plan={day,status:'planned',intensity:setting,blocks:[],reviews:[],grammar:[],cursor:0,total:0,optional:weekend,actual:'',carried:[]};
  for(const b of routeBlocks(day)){
    if(!capacity||plan.blocks.length>=(setting==='intense'?2:1))break;
@@ -54,6 +54,7 @@ function planFor(day,reserved=new Set()){
    const t=profile.difficult?0:tier[(new Date(day+'T12:00:00').getDate()-1)%tier.length];
    plan.grammar=[grammarKey(knownVerb.inf,t,0)];
    if(setting!=='light')plan.grammar.push(grammarKey(knownVerb.inf,t,6));
+   plan.grammar=plan.grammar.filter(k=>!plan.reviews.includes(k));
  }
  return plan;
 }
