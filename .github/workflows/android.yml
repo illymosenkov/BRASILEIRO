@@ -45,7 +45,7 @@ jobs:
           cd android && ./gradlew assembleDebug && cd ..
           cp android/app/build/outputs/apk/debug/app-debug.apk /tmp/bora-qa/v50.apk
           cp -a /tmp/bora-qa/v51-www/. www/
-          sed -i 's/versionCode 500/versionCode 511/;s/versionName "5.0"/versionName "5.1"/' android/app/build.gradle
+          sed -i 's/versionCode 500/versionCode 512/;s/versionName "5.0"/versionName "5.1"/' android/app/build.gradle
           npx cap copy android
           cd android && ./gradlew assembleDebug && cd ..
           cp android/app/build/outputs/apk/debug/app-debug.apk /tmp/bora-qa/v51.apk

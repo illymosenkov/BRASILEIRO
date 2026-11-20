@@ -21,7 +21,7 @@ function checkedState(input){
    ['topic','mode','query','filter'].every(k=>c[k]===undefined||str(c[k]))&&
    (c.week===undefined||Number.isSafeInteger(c.week))&&
    (c.grammar===undefined||obj(c.grammar)&&Object.keys(verbContexts).includes(c.grammar.verb)&&Object.hasOwn(levelTenses,c.grammar.level)&&
-    Object.hasOwn(modeNames,c.grammar.mode)&&typeof c.grammar.irregular==='boolean'&&num(c.grammar.tense)&&c.grammar.tense<=6));
+    Object.hasOwn(modeNames,c.grammar.mode)&&typeof c.grammar.irregular==='boolean'&&num(c.grammar.tense)&&c.grammar.tense<=6&&(c.grammar.selected===undefined||Array.isArray(c.grammar.selected)&&c.grammar.selected.every(v=>Object.hasOwn(verbContexts,v)))));
  const run=s=>obj(s)&&returnContext(s.returnTo)&&str(s.id)&&str(s.title)&&optDate(s.date)&&typeof s.finished==='boolean'&&Array.isArray(s.queue)&&s.queue.length>0&&
    s.queue.every(task)&&num(s.index)&&(s.finished?s.index===s.queue.length:s.index<s.queue.length)&&(!s.credited||Array.isArray(s.credited)&&s.credited.every(id=>byId.has(id)));
  valid(obj(input)&&[3,5,6].includes(input.version)&&num(input.xp)&&num(input.streak)&&optDate(input.lastDay)&&
@@ -36,6 +36,7 @@ function checkedState(input){
    return checkedState(migrated);
  }
  const s=input;
+ valid(s.preferences.grammarVerbs===undefined||Array.isArray(s.preferences.grammarVerbs)&&s.preferences.grammarVerbs.every(v=>Object.hasOwn(verbContexts,v)));
  valid(obj(s.preferences)&&num(s.preferences.focus)&&s.preferences.focus<=100&&s.preferences.focus%10===0&&Object.hasOwn(paceNames,s.preferences.intensity));
  dict(s.skills,(k,v)=>{
    if(!key(k)||!obj(v)||!['checks','firstRight','firstWrong','errors','attempts','hints','streak','interval','confidence','difficulty'].every(f=>num(v[f])))return false;

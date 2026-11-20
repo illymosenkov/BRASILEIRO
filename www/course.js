@@ -9,7 +9,7 @@ const getTopic=id=>groups.find(g=>g.id===id)||getLesson(id);
 const returnRoutes=['home','calendar','topic','learn','grammar','reviews','weak'];
 Bora.captureReturn=(date,source)=>{
  const route=returnRoutes.includes(screen)?screen:date?'home':source==='grammar'?'grammar':source==='review'?'reviews':'learn';
- return {route,topic:selectedTopic,mode:topicMode,query:catalogQuery,grammar:{...grammarPick},week:calendarWeek,filter:weakFilter};
+ return {route,topic:selectedTopic,mode:topicMode,query:catalogQuery,grammar:{...grammarPick,selected:grammarPick.selected?.slice()},week:calendarWeek,filter:weakFilter};
 };
 Bora.returnLabel=s=>({
  home:'К сегодняшнему плану',calendar:'Вернуться к календарю',topic:'Вернуться к теме',
@@ -107,7 +107,7 @@ document.addEventListener('click',e=>{
  const d=e.target.closest('button')?.dataset;if(!d)return;
  if(d.topic){selectedTopic=d.topic;go('topic');}
  if('unit'in d)launchUnit(+d.unit);
- if(d.verb){grammarPick.verb=d.verb;grammarPick.irregular=false;go('grammar');}
+ if(d.verb){grammarPick.verb=d.verb;grammarPick.selected=[d.verb];grammarPick.irregular=false;go('grammar');}
  if(d.material)beginPractice(byId.get(d.material).inf||byId.get(d.material).word,[wordTask(d.material,topicMode==='ru-pt'?'ru-pt':'pt-ru')],'','catalog');
 });
 document.addEventListener('input',e=>{if(e.target.id==='catalog-search'){catalogQuery=e.target.value;catalogResults();}});
@@ -117,4 +117,5 @@ document.addEventListener('change',e=>{
 });
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state&&state.calendarDay!==localDay()&&['home','calendar'].includes(screen))go(screen);});
 state=bootStorage();
+if(Array.isArray(state.preferences.grammarVerbs))grammarPick.selected=[...state.preferences.grammarVerbs];
 go('home');

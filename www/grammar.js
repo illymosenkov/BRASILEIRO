@@ -59,33 +59,48 @@ function formRow(v,t,p){
   const s=state.skills?.[grammarKey(v,t,p)],status=s?.status||'neutral',clue=pronunciationClue(v,t,p);
   return '<div class="settings-row"><span>'+people[p]+'<small class="skill-state '+status+'">'+knowledge[status]+'</small></span><span><b>'+formOf(v,t,p)+'</b>'+(clue?'<small class="skill-pron">'+esc(clue)+'</small>':'')+'</span></div>';
 }
+function selectedGrammarVerbs(){
+ const g=grammarPick, selected=g.selected||[g.verb];
+ return [...new Set(selected)].filter(v=>verbContexts[v]&&(!g.irregular||irregular.has(v)));
+}
 function grammarPage() {
   const g=grammarPick, list=Object.keys(verbContexts).filter(v=>!g.irregular||irregular.has(v));
   if(!list.includes(g.verb)) g.verb=list[0];
+  const chosen=selectedGrammarVerbs();
   const v=g.verb,w=byId.get('v:'+v);
   const select=(id,label,options,value)=>'<label class="field">'+label+'<select class="input" data-grammar="'+id+'">'+options.map(([k,s])=>'<option value="'+k+'" '+(k==value?'selected':'')+'>'+esc(s)+'</option>').join('')+'</select></label>';
   const known=people.filter((_,p)=>state.skills?.[grammarKey(v,g.tense,p)]?.checks).length;
   $('view').innerHTML='<div class="content"><h2>Глаголы и спряжения</h2><div class="card">'+
     select('level','Уровень',Object.keys(levelTenses).map(k=>[k,k]),g.level)+
     '<label><input type="checkbox" data-grammar="irregular" '+(g.irregular?'checked':'')+'> Только неправильные глаголы</label>'+
-    select('verb','Глагол',list.map(k=>[k,k+' — '+byId.get('v:'+k).meaning]),v)+
+    '<details class="grammar-selection"><summary>Глаголы для урока · '+chosen.length+'</summary>'+
+    list.map(k=>'<label class="grammar-check"><input type="checkbox" data-grammar-verb="'+k+'" '+(chosen.includes(k)?'checked':'')+'><span>'+esc(k)+' — '+esc(byId.get('v:'+k).meaning)+'</span></label>').join('')+'</details>'+
+    '<p class="muted">'+esc(chosen.join(' · ')||'Выбери хотя бы один глагол')+'</p>'+
+    select('verb','Посмотреть формы глагола',list.map(k=>[k,k+' — '+byId.get('v:'+k).meaning]),v)+
     select('tense','Время',levelTenses[g.level].map(t=>[t,tenses[t][0]+' · '+tenses[t][2]]),g.tense)+
     '<p><b>'+esc(w.meaning)+'</b> · '+(irregular.has(v)?'неправильный':'правильный')+' · '+esc(w.pron)+'</p><p>Eu '+formOf(v,0,0)+' '+verbContexts[v][0]+'.<br>'+cap(verbContexts[v][1])+'.</p><details><summary>Формы · проверено '+known+' из 7</summary>'+
     people.map((_,p)=>formRow(v,g.tense,p)).join('')+
     '<p class="muted">A gente означает «мы» и сочетается с формой третьего лица единственного числа.</p></details></div><div class="card">'+
-    select('mode','Упражнение',Object.entries(modeNames),g.mode)+'<button class="btn wide" data-practice-grammar>Начать тренировку</button></div></div>';
+    select('mode','Упражнение',Object.entries(modeNames),g.mode)+'<button class="btn wide" data-practice-grammar '+(chosen.length?'':'disabled')+'>Начать тренировку</button></div></div>';
 }
 function startGrammar() {
-  const g=grammarPick, learned=Object.keys(state.skills||{}).filter(k=>k.startsWith('form|')&&paradigms[k.split('|')[1]]).map(k=>k.split('|'));
-  const queue=Array.from({length:7},(_,i)=>{
+  const g=grammarPick, selected=selectedGrammarVerbs();
+  if(!selected.length){toast('Выбери хотя бы один глагол.');return;}
+  const ordered=shuffle(selected);
+  const queue=Array.from({length:Math.max(7,selected.length)},(_,i)=>{
     const mode=g.mode==='mix'?['recall','choice','translate','fix'][i%4]:g.mode;
-    const previous=g.mode==='mix'&&i%3===2?pickOne(learned.filter(f=>levelTenses[g.level].includes(+f[2])&&(!g.irregular||irregular.has(f[1])))):null;
-    const verb=previous?.[1]||(g.irregular&&i>0?pickOne([...irregular]):g.verb);
-    return formTask(verb,previous?+previous[2]:g.tense,i,mode,g.level==='B2');
+    return formTask(ordered[i%ordered.length],g.tense,i%people.length,mode,g.level==='B2');
   });
   beginPractice('Глаголы и спряжения',queue,'','grammar');
 }
 document.addEventListener('change', e=>{
+  const verb=e.target.dataset.grammarVerb;
+  if(verb){
+    const selected=new Set(selectedGrammarVerbs());
+    if(e.target.checked)selected.add(verb);else selected.delete(verb);
+    grammarPick.selected=[...selected];
+    settings().grammarVerbs=[...selected];save();grammarPage();return;
+  }
   const k=e.target.dataset.grammar;
   if(!k)return;
   grammarPick[k]=k==='irregular'?e.target.checked:k==='tense'?Number(e.target.value):e.target.value;

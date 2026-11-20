@@ -1,0 +1,16 @@
+const {app,assert}=require('./dom.cjs');
+const a=app();a.run("go('grammar')");
+a.click('[data-grammar-verb=ter]');a.click('[data-grammar-verb=ir]');
+a.click('[data-practice-grammar]');
+assert.deepEqual([...new Set(a.run('state.practice.queue.map(q=>q.key.split("|")[1])'))].sort(),['fazer','ir','ter']);
+a.run("state.sound=false;while(!state.practice.finished){if(activeTask().solved)advancePractice();else gradePractice(activeTask().answers[0]);}");
+a.click('[data-return]');
+assert.equal(a.run('selectedGrammarVerbs().length'),3);
+const raw=a.w.localStorage.getItem('bora_civic_v51');
+const b=app({bora_civic_v51:raw});b.run("go('grammar')");
+assert.equal(b.run('selectedGrammarVerbs().length'),3);
+b.run("grammarPick.selected=['falar','ter'];grammarPick.irregular=true;grammarPage();startGrammar()");
+assert.ok(b.run('state.practice.queue.every(q=>q.key.split("|")[1]==="ter")'));
+b.run("grammarPick.selected=[];go('grammar')");assert.ok(b.find('[data-practice-grammar]').disabled);
+a.dom.window.close();b.dom.window.close();
+console.log('Multiple selected verbs, strict membership, restart, return, irregular filter and empty selection verified.');

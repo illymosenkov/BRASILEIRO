@@ -26,7 +26,7 @@ def manifest_version(data):
                 attr = node + start + i*stride
                 if struct.unpack_from('<I', data, attr+4)[0] == version_attribute:
                     assert struct.unpack_from('<I', data, attr+16)[0] == 404
-                    struct.pack_into('<I', data, attr+16, 511)
+                    struct.pack_into('<I', data, attr+16, 512)
                     return data
         offset += size
     raise ValueError('Version attribute missing')
